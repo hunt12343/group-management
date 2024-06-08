@@ -1,6 +1,5 @@
 import json
 import os
-import random
 import secrets
 import logging
 from datetime import datetime
@@ -9,8 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQ
 from token_1 import token
 
 DATA_FILE = 'bot_data.json'
-ALLOWED_IDS = {5667016949, 5048444272, 1732582235}
-
+ALLOWED_IDS = {5667016949, 5048444272, 1732582235, 1895916617}
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -107,6 +105,23 @@ async def inline_start(update: Update, context: CallbackContext) -> None:
     reply_markup = InlineKeyboardMarkup([[button]])
     await update.message.reply_text("Please start the bot by clicking the button below:", reply_markup=reply_markup)
 
+async def three_dice(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id not in ALLOWED_IDS:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+    chat_type = update.effective_chat.type
+    if chat_type not in ['group', 'supergroup']:
+        await update.message.reply_text("This command can only be used in groups.")
+        return
+    if update.message.reply_to_message:
+        user_dice_msg_id = update.message.reply_to_message.message_id
+        for _ in range(3):
+            await context.bot.send_dice(chat_id=update.effective_chat.id, reply_to_message_id=user_dice_msg_id)
+    else:
+        for _ in range(3):
+            await context.bot.send_dice(chat_id=update.effective_chat.id)
+
 def main():
     global start_date, user_ids
     start_date, user_ids = load_bot_data()
@@ -118,6 +133,7 @@ def main():
     application.add_handler(CommandHandler("dice", dice))
     application.add_handler(CommandHandler("exp", expire))
     application.add_handler(CommandHandler("broadcast", broadcast))
+    application.add_handler(CommandHandler("threedice", three_dice))
     application.add_handler(CallbackQueryHandler(inline_start, pattern="start"))
 
     logger.info("Bot is running...")
