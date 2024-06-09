@@ -2,8 +2,8 @@ import json
 import os
 import secrets
 import logging
-from datetime import datetime
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from datetime import datetime, timedelta
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
 from token_1 import token
 
@@ -138,6 +138,9 @@ async def join_lottery(update: Update, context: CallbackContext) -> None:
     if not lottery_active:
         await update.message.reply_text("There is no active lottery. Please wait for the host to start one.")
         return
+    if user_id in lottery_entries:
+        await update.message.reply_text("You have already joined the lottery.")
+        return
     
     try:
         number = int(context.args[0])
@@ -204,6 +207,7 @@ async def add_allowed_id(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(f"User ID {new_id} has been added to allowed IDs.")
 
 async def remove_allowed_id(update: Update, context: CallbackContext) -> None:
+    user_id
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
         await update.message.reply_text("You do not have permission to use this command.")
@@ -218,6 +222,55 @@ async def remove_allowed_id(update: Update, context: CallbackContext) -> None:
     allowed_ids.discard(remove_id)
     save_allowed_ids(allowed_ids)
     await update.message.reply_text(f"User ID {remove_id} has been removed from allowed IDs.")
+
+async def mute(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id not in allowed_ids:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    if not update.message.reply_to_message:
+        await update.message.reply_text("Please reply to the user you want to mute.")
+        return
+
+    user_to_mute = update.message.reply_to_message.from_user
+    chat_id = update.effective_chat.id
+    permissions = ChatPermissions()
+    try:
+        await context.bot.restrict_chat_member(chat_id, user_to_mute.id, permissions)
+        await update.message.reply_text(f"{user_to_mute.first_name} has been muted.")
+    except Exception as e:
+        logger.error(f"Failed to mute user: {e}")
+        await update.message.reply_text("Failed to mute the user.")
+
+async def unmute(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id not in allowed_ids:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    if not update.message.reply_to_message:
+        await update.message.reply_text("Please reply to the user you want to unmute.")
+        return
+
+    user_to_unmute = update.message.reply_to_message.from_user
+    chat_id = update.effective_chat.id
+
+    permissions = {
+        "can_send_messages": True,
+        "can_send_media_messages": True,
+        "can_send_polls": True,
+        "can_send_other_messages": True,
+        "can_add_web_page_previews": True
+    }
+
+    try:
+        await context.bot.restrict_chat_member(chat_id, user_to_unmute.id, permissions)
+        await update.message.reply_text(f"{user_to_unmute.first_name} has been unmuted.")
+    except Exception as e:
+        logger.error(f"Failed to unmute user: {e}")
+        await update.message.reply_text("Failed to unmute the user.")
+
 
 def main():
     global start_date, user_ids, allowed_ids
@@ -236,6 +289,8 @@ def main():
     application.add_handler(CommandHandler("fstart", start_lottery))
     application.add_handler(CommandHandler("add", add_allowed_id))
     application.add_handler(CommandHandler("remove", remove_allowed_id))
+    application.add_handler(CommandHandler("mute", mute))
+    application.add_handler(CommandHandler("unmute",unmute))
     application.add_handler(CallbackQueryHandler(inline_start, pattern="start"))
 
     logger.info("Bot is running...")
