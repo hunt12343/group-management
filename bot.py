@@ -2,13 +2,14 @@ import json
 import os
 import secrets
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
 from token_1 import token
 
 DATA_FILE = 'bot_data.json'
 ALLOWED_IDS_FILE = 'allowed_ids.json'
+SUDO_IDS_FILE = 'sudo_ids.json'
 OWNER_ID = 5667016949
 lottery_entries = {}
 lottery_active = False
@@ -48,6 +49,16 @@ def load_allowed_ids():
 def save_allowed_ids(allowed_ids):
     with open(ALLOWED_IDS_FILE, 'w') as file:
         json.dump(list(allowed_ids), file)
+
+def load_sudo_ids():
+    if os.path.exists(SUDO_IDS_FILE):
+        with open(SUDO_IDS_FILE, 'r') as file:
+            return set(json.load(file))
+    return {OWNER_ID}
+
+def save_sudo_ids(sudo_ids):
+    with open(SUDO_IDS_FILE, 'w') as file:
+        json.dump(list(sudo_ids), file)
 
 def escape_markdown_v2(text):
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
@@ -207,7 +218,6 @@ async def add_allowed_id(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(f"User ID {new_id} has been added to allowed IDs.")
 
 async def remove_allowed_id(update: Update, context: CallbackContext) -> None:
-    user_id
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
         await update.message.reply_text("You do not have permission to use this command.")
@@ -223,9 +233,41 @@ async def remove_allowed_id(update: Update, context: CallbackContext) -> None:
     save_allowed_ids(allowed_ids)
     await update.message.reply_text(f"User ID {remove_id} has been removed from allowed IDs.")
 
+async def add_sudo(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    try:
+        sudo_id = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid user ID.")
+        return
+
+    sudo_ids.add(sudo_id)
+    save_sudo_ids(sudo_ids)
+    await update.message.reply_text(f"User ID {sudo_id} has been granted sudo permissions.")
+
+async def remove_sudo(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    try:
+        sudo_id = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid user ID.")
+        return
+
+    sudo_ids.discard(sudo_id)
+    save_sudo_ids(sudo_ids)
+    await update.message.reply_text(f"User ID {sudo_id} has been removed from sudo permissions.")
+
 async def mute(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
-    if user_id not in allowed_ids:
+    if user_id not in sudo_ids and user_id != OWNER_ID:
         await update.message.reply_text("You do not have permission to use this command.")
         return
 
@@ -235,7 +277,7 @@ async def mute(update: Update, context: CallbackContext) -> None:
 
     user_to_mute = update.message.reply_to_message.from_user
     chat_id = update.effective_chat.id
-    permissions = ChatPermissions()
+    permissions = ChatPermissions(can_send_messages=False)
     try:
         await context.bot.restrict_chat_member(chat_id, user_to_mute.id, permissions)
         await update.message.reply_text(f"{user_to_mute.first_name} has been muted.")
@@ -245,7 +287,7 @@ async def mute(update: Update, context: CallbackContext) -> None:
 
 async def unmute(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
-    if user_id not in allowed_ids:
+    if user_id not in sudo_ids and user_id != OWNER_ID:
         await update.message.reply_text("You do not have permission to use this command.")
         return
 
@@ -255,15 +297,7 @@ async def unmute(update: Update, context: CallbackContext) -> None:
 
     user_to_unmute = update.message.reply_to_message.from_user
     chat_id = update.effective_chat.id
-
-    permissions = {
-        "can_send_messages": True,
-        "can_send_media_messages": True,
-        "can_send_polls": True,
-        "can_send_other_messages": True,
-        "can_add_web_page_previews": True
-    }
-
+    permissions = ChatPermissions(can_send_messages=True)
     try:
         await context.bot.restrict_chat_member(chat_id, user_to_unmute.id, permissions)
         await update.message.reply_text(f"{user_to_unmute.first_name} has been unmuted.")
@@ -271,11 +305,11 @@ async def unmute(update: Update, context: CallbackContext) -> None:
         logger.error(f"Failed to unmute user: {e}")
         await update.message.reply_text("Failed to unmute the user.")
 
-
 def main():
-    global start_date, user_ids, allowed_ids
+    global start_date, user_ids, allowed_ids, sudo_ids
     start_date, user_ids = load_bot_data()
     allowed_ids = load_allowed_ids()
+    sudo_ids = load_sudo_ids()
 
     application = Application.builder().token(token).build()
 
@@ -289,8 +323,10 @@ def main():
     application.add_handler(CommandHandler("fstart", start_lottery))
     application.add_handler(CommandHandler("add", add_allowed_id))
     application.add_handler(CommandHandler("remove", remove_allowed_id))
+    application.add_handler(CommandHandler("addsudo", add_sudo))
+    application.add_handler(CommandHandler("removesudo", remove_sudo))
     application.add_handler(CommandHandler("mute", mute))
-    application.add_handler(CommandHandler("unmute",unmute))
+    application.add_handler(CommandHandler("unmute", unmute))
     application.add_handler(CallbackQueryHandler(inline_start, pattern="start"))
 
     logger.info("Bot is running...")
