@@ -8,7 +8,10 @@ from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQ
 from token_1 import token
 
 DATA_FILE = 'bot_data.json'
-ALLOWED_IDS = {5667016949, 5048444272, 1732582235, 1895916617}
+ALLOWED_IDS_FILE = 'allowed_ids.json'
+OWNER_ID = 5667016949
+lottery_entries = {}
+lottery_active = False
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -35,6 +38,16 @@ def save_bot_data(start_date, user_ids):
     }
     with open(DATA_FILE, 'w') as file:
         json.dump(data, file)
+
+def load_allowed_ids():
+    if os.path.exists(ALLOWED_IDS_FILE):
+        with open(ALLOWED_IDS_FILE, 'r') as file:
+            return set(json.load(file))
+    return {OWNER_ID}
+
+def save_allowed_ids(allowed_ids):
+    with open(ALLOWED_IDS_FILE, 'w') as file:
+        json.dump(list(allowed_ids), file)
 
 def escape_markdown_v2(text):
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
@@ -87,7 +100,7 @@ async def expire(update: Update, context: CallbackContext) -> None:
 
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
-    if user_id not in ALLOWED_IDS:
+    if user_id not in allowed_ids:
         await update.message.reply_text("You do not have permission to use this command.")
         return
     message = ' '.join(context.args)
@@ -105,26 +118,111 @@ async def inline_start(update: Update, context: CallbackContext) -> None:
     reply_markup = InlineKeyboardMarkup([[button]])
     await update.message.reply_text("Please start the bot by clicking the button below:", reply_markup=reply_markup)
 
-async def three_dice(update: Update, context: CallbackContext) -> None:
+async def lottery(update: Update, context: CallbackContext) -> None:
+    global lottery_active, lottery_entries
     user_id = update.effective_user.id
-    if user_id not in ALLOWED_IDS:
+    if user_id not in allowed_ids:
         await update.message.reply_text("You do not have permission to use this command.")
         return
-    chat_type = update.effective_chat.type
-    if chat_type not in ['group', 'supergroup']:
-        await update.message.reply_text("This command can only be used in groups.")
+    
+    lottery_active = True
+    lottery_entries = {}
+    await update.message.reply_text("The lottery has started! Use /joinlottery <number> to join.")
+
+async def join_lottery(update: Update, context: CallbackContext) -> None:
+    global lottery_active
+    user_id = update.effective_user.id
+    if user_id not in user_ids:
+        await inline_start(update, context)
         return
-    if update.message.reply_to_message:
-        user_dice_msg_id = update.message.reply_to_message.message_id
-        for _ in range(3):
-            await context.bot.send_dice(chat_id=update.effective_chat.id, reply_to_message_id=user_dice_msg_id)
-    else:
-        for _ in range(3):
-            await context.bot.send_dice(chat_id=update.effective_chat.id)
+    if not lottery_active:
+        await update.message.reply_text("There is no active lottery. Please wait for the host to start one.")
+        return
+    
+    try:
+        number = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid number to join the lottery.")
+        return
+    
+    lottery_entries[user_id] = number
+    await update.message.reply_text(f"You have joined the lottery with number {number}.")
+
+async def start_lottery(update: Update, context: CallbackContext) -> None:
+    global lottery_active
+    user_id = update.effective_user.id
+    if user_id not in allowed_ids:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+    
+    if not lottery_active:
+        await update.message.reply_text("There is no active lottery to start.")
+        return
+    
+    if not lottery_entries:
+        await update.message.reply_text("No one has joined the lottery yet.")
+        return
+
+    dice_values = []
+    for _ in range(3):
+        dice_msg = await context.bot.send_dice(chat_id=update.effective_chat.id)
+        dice_values.append(dice_msg.dice.value)
+    
+    total = sum(dice_values)
+    
+    # Rank users based on how close their number is to the total
+    sorted_entries = sorted(lottery_entries.items(), key=lambda x: abs(x[1] - total))
+    
+    result_message = (
+        f"🎲 <b>Lottery Results</b> 🎲\n\n"
+        f"Dice Rolls: <b>{dice_values[0]}</b>, <b>{dice_values[1]}</b>, <b>{dice_values[2]}</b>\n"
+        f"Total: <b>{total}</b>\n\n"
+        f"🏆 <b>Winners Ranking</b> 🏆\n"
+    )
+    
+    for rank, (user_id, number) in enumerate(sorted_entries, start=1):
+        user_chat = await context.bot.get_chat(user_id)
+        result_message += f"{rank}. <a href='tg://user?id={user_id}'>{escape_markdown_v2(user_chat.first_name)}</a> with number <b>{number}</b>\n"
+    
+    await update.message.reply_text(result_message, parse_mode='HTML')
+    lottery_active = False
+
+async def add_allowed_id(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    try:
+        new_id = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid user ID.")
+        return
+
+    allowed_ids.add(new_id)
+    save_allowed_ids(allowed_ids)
+    await update.message.reply_text(f"User ID {new_id} has been added to allowed IDs.")
+
+async def remove_allowed_id(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    try:
+        remove_id = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid user ID.")
+        return
+
+    allowed_ids.discard(remove_id)
+    save_allowed_ids(allowed_ids)
+    await update.message.reply_text(f"User ID {remove_id} has been removed from allowed IDs.")
 
 def main():
-    global start_date, user_ids
+    global start_date, user_ids, allowed_ids
     start_date, user_ids = load_bot_data()
+    allowed_ids = load_allowed_ids()
 
     application = Application.builder().token(token).build()
 
@@ -133,7 +231,11 @@ def main():
     application.add_handler(CommandHandler("dice", dice))
     application.add_handler(CommandHandler("exp", expire))
     application.add_handler(CommandHandler("broadcast", broadcast))
-    application.add_handler(CommandHandler("threedice", three_dice))
+    application.add_handler(CommandHandler("lottery", lottery))
+    application.add_handler(CommandHandler("joinlottery", join_lottery))
+    application.add_handler(CommandHandler("fstart", start_lottery))
+    application.add_handler(CommandHandler("add", add_allowed_id))
+    application.add_handler(CommandHandler("remove", remove_allowed_id))
     application.add_handler(CallbackQueryHandler(inline_start, pattern="start"))
 
     logger.info("Bot is running...")
