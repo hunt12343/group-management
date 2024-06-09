@@ -73,10 +73,6 @@ async def start(update: Update, context: CallbackContext) -> None:
     )
 
 async def flip(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
-    if user_id not in user_ids:
-        await inline_start(update, context)
-        return
     user = update.effective_user
     result = secrets.choice(["heads", "tails"])
     user_link = f"<a href='tg://user?id={user.id}'>{escape_markdown_v2(user.first_name)}</a>"
