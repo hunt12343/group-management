@@ -69,7 +69,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     user_ids.add(user_id)
     save_bot_data(start_date, user_ids)
     await update.message.reply_text(
-        "Welcome! Use /coin to flip a coin, /dice to roll a dice, and /exp to expire your bets."
+        "Welcome! Use /coin to flip a coin, /dice to roll a dice, /football to play football, /basketball to play basketball, /dart to play darts, and /exp to expire your bets."
     )
 
 async def flip(update: Update, context: CallbackContext) -> None:
@@ -85,9 +85,6 @@ async def flip(update: Update, context: CallbackContext) -> None:
 
 async def dice(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
-    if user_id not in user_ids:
-        await inline_start(update, context)
-        return
     chat_type = update.effective_chat.type
     if chat_type in ['group', 'supergroup']:
         if update.message.reply_to_message:
@@ -98,11 +95,44 @@ async def dice(update: Update, context: CallbackContext) -> None:
     else:
         await context.bot.send_dice(chat_id=update.effective_chat.id)
 
+async def football(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    chat_type = update.effective_chat.type
+    if chat_type in ['group', 'supergroup']:
+        if update.message.reply_to_message:
+            user_msg_id = update.message.reply_to_message.message_id
+            await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='⚽', reply_to_message_id=user_msg_id)
+        else:
+            await update.message.reply_text("Please reply to a user's message to play football for them.")
+    else:
+        await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='⚽')
+
+async def basketball(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    chat_type = update.effective_chat.type
+    if chat_type in ['group', 'supergroup']:
+        if update.message.reply_to_message:
+            user_msg_id = update.message.reply_to_message.message_id
+            await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🏀', reply_to_message_id=user_msg_id)
+        else:
+            await update.message.reply_text("Please reply to a user's message to play basketball for them.")
+    else:
+        await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🏀')
+
+async def dart(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    chat_type = update.effective_chat.type
+    if chat_type in ['group', 'supergroup']:
+        if update.message.reply_to_message:
+            user_msg_id = update.message.reply_to_message.message_id
+            await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🎯', reply_to_message_id=user_msg_id)
+        else:
+            await update.message.reply_text("Please reply to a user's message to play darts for them.")
+    else:
+        await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🎯')
+
 async def expire(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
-    if user_id not in user_ids:
-        await inline_start(update, context)
-        return
     await update.message.reply_text("Your all bets are expired")
 
 async def broadcast(update: Update, context: CallbackContext) -> None:
@@ -139,9 +169,6 @@ async def lottery(update: Update, context: CallbackContext) -> None:
 async def join_lottery(update: Update, context: CallbackContext) -> None:
     global lottery_active
     user_id = update.effective_user.id
-    if user_id not in user_ids:
-        await inline_start(update, context)
-        return
     if not lottery_active:
         await update.message.reply_text("There is no active lottery. Please wait for the host to start one.")
         return
@@ -179,23 +206,20 @@ async def start_lottery(update: Update, context: CallbackContext) -> None:
         dice_values.append(dice_msg.dice.value)
     
     total = sum(dice_values)
+    closest_user = None
+    closest_diff = float('inf')
     
-    # Rank users based on how close their number is to the total
-    sorted_entries = sorted(lottery_entries.items(), key=lambda x: abs(x[1] - total))
+    for uid, number in lottery_entries.items():
+        diff = abs(total - number)
+        if diff < closest_diff:
+            closest_diff = diff
+            closest_user = uid
     
-    result_message = (
-        f"🎲 <b>Lottery Results</b> 🎲\n\n"
-        f"Dice Rolls: <b>{dice_values[0]}</b>, <b>{dice_values[1]}</b>, <b>{dice_values[2]}</b>\n"
-        f"Total: <b>{total}</b>\n\n"
-        f"🏆 <b>Winners Ranking</b> 🏆\n"
-    )
+    winner_msg = f"The lottery has ended! The rolled numbers are {dice_values} with a total of {total}. The winner is <a href='tg://user?id={closest_user}'>this user</a> with the closest guess of {lottery_entries[closest_user]}!"
+    await update.message.reply_text(winner_msg, parse_mode='HTML')
     
-    for rank, (user_id, number) in enumerate(sorted_entries, start=1):
-        user_chat = await context.bot.get_chat(user_id)
-        result_message += f"{rank}. <a href='tg://user?id={user_id}'>{escape_markdown_v2(user_chat.first_name)}</a> with number <b>{number}</b>\n"
-    
-    await update.message.reply_text(result_message, parse_mode='HTML')
     lottery_active = False
+    lottery_entries = {}
 
 async def add_allowed_id(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -312,6 +336,9 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("flip", flip))
     application.add_handler(CommandHandler("dice", dice))
+    application.add_handler(CommandHandler("football", football))
+    application.add_handler(CommandHandler("basketball", basketball))
+    application.add_handler(CommandHandler("dart", dart))
     application.add_handler(CommandHandler("exp", expire))
     application.add_handler(CommandHandler("broadcast", broadcast))
     application.add_handler(CommandHandler("lottery", lottery))
