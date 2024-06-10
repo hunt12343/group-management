@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import secrets
@@ -6,6 +7,7 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
 from token_1 import token
+from telegram.constants import ParseMode
 
 DATA_FILE = 'bot_data.json'
 ALLOWED_IDS_FILE = 'allowed_ids.json'
@@ -212,14 +214,13 @@ async def start_lottery(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("No one has joined the lottery yet.")
         return
 
-    # Send dice emojis to simulate rolling animation
-    msg = await update.message.reply_dice(emoji="🎲🎲🎲", disable_notification=True)
+    # Send dice emojis to simulate rolling animation and collect their values
+    dice_values = []
+    for _ in range(3):
+        msg = await update.message.reply_dice(emoji="🎲", disable_notification=True)
+        dice_values.append(msg.dice.value)
+        await asyncio.sleep(1)  # Small delay to ensure dice messages are sent properly
 
-    # Wait for a short duration to simulate rolling animation
-    await asyncio.sleep(2)
-
-    # Retrieve the dice values from the message
-    dice_values = [msg.dice.value for _ in range(3)]
     total = sum(dice_values)
 
     # Determine the closest guesses
@@ -242,12 +243,11 @@ async def start_lottery(update: Update, context: CallbackContext) -> None:
     result_message += "\nCongratulations to the winners! 🥳"
 
     # Send the result message
-    await update.message.reply_text(result_message, parse_mode='HTML')
+    await update.message.reply_text(result_message, parse_mode=ParseMode.HTML)
 
     # Reset the lottery state
     lottery_active = False
     lottery_entries = {}
-
 async def add_allowed_id(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
