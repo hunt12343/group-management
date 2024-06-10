@@ -167,7 +167,7 @@ async def lottery(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text("The lottery has started! Use /joinlottery <number> to join.")
 
 async def join_lottery(update: Update, context: CallbackContext) -> None:
-    global lottery_active
+    global lottery_active, lottery_entries
     user_id = update.effective_user.id
     if not lottery_active:
         await update.message.reply_text("There is no active lottery. Please wait for the host to start one.")
@@ -186,7 +186,7 @@ async def join_lottery(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(f"You have joined the lottery with number {number}.")
 
 async def start_lottery(update: Update, context: CallbackContext) -> None:
-    global lottery_active
+    global lottery_active, lottery_entries
     user_id = update.effective_user.id
     if user_id not in allowed_ids:
         await update.message.reply_text("You do not have permission to use this command.")
@@ -325,6 +325,16 @@ async def unmute(update: Update, context: CallbackContext) -> None:
         logger.error(f"Failed to unmute user: {e}")
         await update.message.reply_text("Failed to unmute the user.")
 
+async def backup(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    await context.bot.send_document(chat_id=OWNER_ID, document=open(DATA_FILE, 'rb'))
+    await context.bot.send_document(chat_id=OWNER_ID, document=open(ALLOWED_IDS_FILE, 'rb'))
+    await context.bot.send_document(chat_id=OWNER_ID, document=open(SUDO_IDS_FILE, 'rb'))
+
 def main():
     global start_date, user_ids, allowed_ids, sudo_ids
     start_date, user_ids = load_bot_data()
@@ -350,6 +360,7 @@ def main():
     application.add_handler(CommandHandler("removesudo", remove_sudo))
     application.add_handler(CommandHandler("mute", mute))
     application.add_handler(CommandHandler("unmute", unmute))
+    application.add_handler(CommandHandler("backup", backup))
     application.add_handler(CallbackQueryHandler(inline_start, pattern="start"))
 
     logger.info("Bot is running...")
