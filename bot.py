@@ -196,35 +196,52 @@ async def join_lottery(update: Update, context: CallbackContext) -> None:
 async def start_lottery(update: Update, context: CallbackContext) -> None:
     global lottery_active, lottery_entries
     user_id = update.effective_user.id
-    if user_id not in allowed_ids:
+
+    # Check if the user has the appropriate permissions
+    if user_id not in allowed_ids and user_id not in sudo_ids and user_id != OWNER_ID:
         await update.message.reply_text("You do not have permission to use this command.")
         return
-    
+
+    # Check if the lottery is active
     if not lottery_active:
         await update.message.reply_text("There is no active lottery to start.")
         return
-    
+
+    # Check if there are any participants in the lottery
     if not lottery_entries:
         await update.message.reply_text("No one has joined the lottery yet.")
         return
 
-    dice_values = [secrets.randbelow(6) + 1 for _ in range(5)]
+    # Simulate dice rolls
+    dice_values = [secrets.randbelow(6) + 1 for _ in range(3)]
     total = sum(dice_values)
 
-    closest_user = None
-    closest_diff = float('inf')
-    for uid, number in lottery_entries.items():
-        diff = abs(total - number)
-        if diff < closest_diff:
-            closest_diff = diff
-            closest_user = uid
+    # Determine the closest guesses
+    participants = sorted(lottery_entries.items(), key=lambda x: abs(total - x[1]))
+    top_three = participants[:3]
 
-    user_link = f"<a href='tg://user?id={closest_user}'>{escape_markdown_v2(context.bot.get_chat(closest_user).first_name)}</a>"
-    winner_msg = f"The lottery has ended! The rolled numbers are {dice_values} with a total of {total}. The winner is {user_link} with the closest guess of {lottery_entries[closest_user]}!"
-    await update.message.reply_text(winner_msg, parse_mode='HTML')
-    
+    # Format the result message
+    result_message = (
+        f"<b>🎉 Lottery Results 🎉</b>\n\n"
+        f"<b>Rolled Numbers:</b> {', '.join(map(str, dice_values))}\n"
+        f"<b>Total:</b> {total}\n\n"
+    )
+
+    for rank, (uid, guess) in enumerate(top_three, start=1):
+        winner = await context.bot.get_chat(uid)
+        winner_name = escape_markdown_v2(winner.first_name)
+        winner_link = f"<a href='tg://user?id={uid}'>{winner_name}</a>"
+        result_message += f"<b>#{rank}:</b> {winner_link} with guess {guess}\n"
+
+    result_message += "\nCongratulations to the winners! 🥳"
+
+    # Send the result message
+    await update.message.reply_text(result_message, parse_mode='HTML')
+
+    # Reset the lottery state
     lottery_active = False
     lottery_entries = {}
+
 
 async def add_allowed_id(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
