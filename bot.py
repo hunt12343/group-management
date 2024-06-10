@@ -212,8 +212,14 @@ async def start_lottery(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("No one has joined the lottery yet.")
         return
 
-    # Simulate dice rolls
-    dice_values = [secrets.randbelow(6) + 1 for _ in range(3)]
+    # Send dice emojis to simulate rolling animation
+    msg = await update.message.reply_dice(emoji="🎲🎲🎲", disable_notification=True)
+
+    # Wait for a short duration to simulate rolling animation
+    await asyncio.sleep(2)
+
+    # Retrieve the dice values from the message
+    dice_values = [msg.dice.value for _ in range(3)]
     total = sum(dice_values)
 
     # Determine the closest guesses
@@ -241,7 +247,6 @@ async def start_lottery(update: Update, context: CallbackContext) -> None:
     # Reset the lottery state
     lottery_active = False
     lottery_entries = {}
-
 
 async def add_allowed_id(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
