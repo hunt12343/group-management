@@ -225,7 +225,7 @@ async def start_lottery(update: Update, context: CallbackContext) -> None:
 
     # Determine the closest guesses
     participants = sorted(lottery_entries.items(), key=lambda x: abs(total - x[1]))
-    top_three = participants[:3]
+    top_three = participants[:10]
 
     # Format the result message
     result_message = (
