@@ -168,10 +168,13 @@ async def lottery(update: Update, context: CallbackContext) -> None:
 
 async def join_lottery(update: Update, context: CallbackContext) -> None:
     global lottery_active, lottery_entries
-    user_id = update.effective_user.id
+    user = update.effective_user
+    user_id = user.id
+
     if not lottery_active:
         await update.message.reply_text("There is no active lottery. Please wait for the host to start one.")
         return
+    
     if user_id in lottery_entries:
         await update.message.reply_text("You have already joined the lottery.")
         return
@@ -182,8 +185,13 @@ async def join_lottery(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Please provide a valid number to join the lottery.")
         return
     
+    if number in lottery_entries.values():
+        await update.message.reply_text("This number is already taken. Please choose another number.")
+        return
+
     lottery_entries[user_id] = number
-    await update.message.reply_text(f"You have joined the lottery with number {number}.")
+    user_link = f"<a href='tg://user?id={user.id}'>{escape_markdown_v2(user.first_name)}</a>"
+    await update.message.reply_text(f"『 {user_link} 』has joined the lottery with number {number}.", parse_mode='HTML')
 
 async def start_lottery(update: Update, context: CallbackContext) -> None:
     global lottery_active, lottery_entries
@@ -200,22 +208,19 @@ async def start_lottery(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("No one has joined the lottery yet.")
         return
 
-    dice_values = []
-    for _ in range(3):
-        dice_msg = await context.bot.send_dice(chat_id=update.effective_chat.id)
-        dice_values.append(dice_msg.dice.value)
-    
+    dice_values = [secrets.randbelow(6) + 1 for _ in range(5)]
     total = sum(dice_values)
+
     closest_user = None
     closest_diff = float('inf')
-    
     for uid, number in lottery_entries.items():
         diff = abs(total - number)
         if diff < closest_diff:
             closest_diff = diff
             closest_user = uid
-    
-    winner_msg = f"The lottery has ended! The rolled numbers are {dice_values} with a total of {total}. The winner is <a href='tg://user?id={closest_user}'>this user</a> with the closest guess of {lottery_entries[closest_user]}!"
+
+    user_link = f"<a href='tg://user?id={closest_user}'>{escape_markdown_v2(context.bot.get_chat(closest_user).first_name)}</a>"
+    winner_msg = f"The lottery has ended! The rolled numbers are {dice_values} with a total of {total}. The winner is {user_link} with the closest guess of {lottery_entries[closest_user]}!"
     await update.message.reply_text(winner_msg, parse_mode='HTML')
     
     lottery_active = False
