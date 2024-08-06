@@ -4,10 +4,9 @@ import os
 import secrets
 import logging
 from datetime import datetime
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
-from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackContext
 from token_1 import token
-from telegram.constants import ParseMode
 from pymongo import MongoClient
 
 # MongoDB connection
@@ -16,6 +15,7 @@ db = client.betbot
 bot_data_collection = db.bot_data
 allowed_ids_collection = db.allowed_ids
 sudo_ids_collection = db.sudo_ids
+users_collection = db.users
 
 # Global variables
 OWNER_ID = 5667016949
@@ -71,9 +71,23 @@ def escape_markdown_v2(text):
     return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
 
 async def start(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
+    user = update.effective_user
+    user_id = user.id
     user_ids.add(user_id)
     save_bot_data(start_date, user_ids)
+
+    # Check if user is already in the database
+    user_data = users_collection.find_one({"user_id": user_id})
+    if not user_data:
+        # Add user to the database with initial values
+        user_data = {
+            "user_id": user_id,
+            "first_name": user.first_name,
+            "start_date": datetime.now().strftime('%Y-%m-%d'),
+            "wins": 0,
+            "losses": 0
+        }
+        users_collection.insert_one(user_data)
     await update.message.reply_text(
         "Welcome! Use /coin to flip a coin, /dice to roll a dice, /football to play football, /basketball to play basketball, /dart to play darts, and /exp to expire your bets."
     )
@@ -140,6 +154,25 @@ async def dart(update: Update, context: CallbackContext) -> None:
 async def expire(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     await update.message.reply_text("Your all bets are expired")
+
+async def profile(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    user_id = user.id
+
+    # Fetch user data from the database
+    user_data = users_collection.find_one({"user_id": user_id})
+    if user_data:
+        profile_message = (
+            f"First Name: {user_data['first_name']}\n"
+            f"User ID: {user_data['user_id']}\n"
+            f"Wins: {user_data['wins']}\n"
+            f"Losses: {user_data['losses']}\n"
+            f"Started Using Bot: {user_data['start_date']}\n"
+        )
+    else:
+        profile_message = "You have not started using the bot yet. Use /start to begin."
+    
+    await update.message.reply_text(profile_message)
 
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -235,6 +268,7 @@ async def main() -> None:
     basketball_handler = CommandHandler("basketball", basketball)
     dart_handler = CommandHandler("dart", dart)
     expire_handler = CommandHandler("expire", expire)
+    profile_handler = CommandHandler("profile", profile)
     broadcast_handler = CommandHandler("broadcast", broadcast)
     inline_start_handler = CommandHandler("inline_start", inline_start)
     add_allowed_id_handler = CommandHandler("add_allowed_id", add_allowed_id)
@@ -249,6 +283,7 @@ async def main() -> None:
     application.add_handler(basketball_handler)
     application.add_handler(dart_handler)
     application.add_handler(expire_handler)
+    application.add_handler(profile_handler)
     application.add_handler(broadcast_handler)
     application.add_handler(inline_start_handler)
     application.add_handler(add_allowed_id_handler)
