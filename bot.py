@@ -9,12 +9,16 @@ from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQ
 from token_1 import token
 from telegram.constants import ParseMode
 
+# MongoDB URI
 MONGO_URI = 'mongodb+srv://zh666602:PDtM7vYlai7JY2iS@betbot.lgwmmus.mongodb.net/?retryWrites=true&w=majority&appName=Betbot'
 client = MongoClient(MONGO_URI)
-db = client['betbot']
-bot_data_collection = db['bot_data']
-allowed_ids_collection = db['allowed_ids']
-sudo_ids_collection = db['sudo_ids']
+
+# Database and Collections
+db = client['betbot']  # Database 'betbot' will be created automatically if it doesn't exist
+bot_data_collection = db['bot_data']  # Collection 'bot_data' will be created automatically if it doesn't exist
+allowed_ids_collection = db['allowed_ids']  # Collection 'allowed_ids' will be created automatically if it doesn't exist
+sudo_ids_collection = db['sudo_ids']  # Collection 'sudo_ids' will be created automatically if it doesn't exist
+
 OWNER_ID = 5667016949
 lottery_entries = {}
 lottery_active = False
@@ -25,6 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Function to load bot data
 def load_bot_data():
     bot_data = bot_data_collection.find_one({'_id': 'bot_data'})
     if bot_data:
@@ -36,6 +41,7 @@ def load_bot_data():
         save_bot_data(start_date, user_ids)
     return start_date, user_ids
 
+# Function to save bot data
 def save_bot_data(start_date, user_ids):
     bot_data_collection.update_one(
         {'_id': 'bot_data'},
@@ -43,33 +49,37 @@ def save_bot_data(start_date, user_ids):
             'start_date': start_date.strftime('%Y-%m-%d'),
             'user_ids': list(user_ids)
         }},
-        upsert=True
+        upsert=True  # Create document if it doesn't exist
     )
 
+# Function to load allowed IDs
 def load_allowed_ids():
     allowed_ids_doc = allowed_ids_collection.find_one({'_id': 'allowed_ids'})
     if allowed_ids_doc:
         return set(allowed_ids_doc['allowed_ids'])
     return {OWNER_ID}
 
+# Function to save allowed IDs
 def save_allowed_ids(allowed_ids):
     allowed_ids_collection.update_one(
         {'_id': 'allowed_ids'},
         {'$set': {'allowed_ids': list(allowed_ids)}},
-        upsert=True
+        upsert=True  # Create document if it doesn't exist
     )
 
+# Function to load sudo IDs
 def load_sudo_ids():
     sudo_ids_doc = sudo_ids_collection.find_one({'_id': 'sudo_ids'})
     if sudo_ids_doc:
         return set(sudo_ids_doc['sudo_ids'])
     return {OWNER_ID}
 
+# Function to save sudo IDs
 def save_sudo_ids(sudo_ids):
     sudo_ids_collection.update_one(
         {'_id': 'sudo_ids'},
         {'$set': {'sudo_ids': list(sudo_ids)}},
-        upsert=True
+        upsert=True  # Create document if it doesn't exist
     )
 
 def escape_markdown_v2(text):
@@ -173,36 +183,23 @@ async def lottery(update: Update, context: CallbackContext) -> None:
     if user_id not in allowed_ids:
         await update.message.reply_text("You do not have permission to use this command.")
         return
-    
     lottery_active = True
     lottery_entries = {}
-    await update.message.reply_text("The lottery has started! Use /joinlottery <number> to join.")
+    await update.message.reply_text("The lottery has started! Use /joinlottery to participate.")
 
 async def join_lottery(update: Update, context: CallbackContext) -> None:
-    global lottery_active, lottery_entries
-    user = update.effective_user
-    user_id = user.id
-
+    global lottery_entries
+    user_id = update.effective_user.id
     if not lottery_active:
-        await update.message.reply_text("There is no active lottery. Please wait for the host to start one.")
+        await update.message.reply_text("There is no active lottery. Please wait for the next lottery to start.")
         return
-    
     if user_id in lottery_entries:
         await update.message.reply_text("You have already joined the lottery.")
         return
-    
-    try:
-        number = int(context.args[0])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please provide a valid number to join the lottery.")
-        return
-    
-    if number in lottery_entries.values():
-        await update.message.reply_text("This number is already taken. Please choose another number.")
-        return
-
+    number = secrets.randbelow(100) + 1
     lottery_entries[user_id] = number
-    user_link = f"<a href='tg://user?id={user_id}'>{escape_markdown_v2(user.first_name)}</a>"
+    user = update.effective_user
+    user_link = f"<a href='tg://user?id={user.id}'>{escape_markdown_v2(user.first_name)}</a>"
     await update.message.reply_text(f"{user_link} has joined the lottery with number {number}!", parse_mode='HTML')
 
 async def end_lottery(update: Update, context: CallbackContext) -> None:
@@ -211,103 +208,97 @@ async def end_lottery(update: Update, context: CallbackContext) -> None:
     if user_id not in allowed_ids:
         await update.message.reply_text("You do not have permission to use this command.")
         return
-    
     if not lottery_active:
         await update.message.reply_text("There is no active lottery.")
         return
-    
     if not lottery_entries:
         await update.message.reply_text("No one has joined the lottery yet.")
         return
-    
     winning_number = secrets.choice(list(lottery_entries.values()))
     winners = [uid for uid, number in lottery_entries.items() if number == winning_number]
     if winners:
         for winner in winners:
             user_link = f"<a href='tg://user?id={winner}'>{escape_markdown_v2(context.bot.get_chat(winner).first_name)}</a>"
-            await update.message.reply_text(f"The lottery has ended! The winning number is {winning_number}. Congratulations {user_link}!", parse_mode='HTML')
+The lottery has ended! Congratulations to {user_link} for winning with the number {winning_number}!", parse_mode='HTML')
     else:
-        await update.message.reply_text(f"The lottery has ended! The winning number is {winning_number}. No one won this time.")
+        await update.message.reply_text(f"The lottery has ended! No one won this time. The winning number was {winning_number}.")
     
     lottery_active = False
     lottery_entries = {}
 
-async def grant(update: Update, context: CallbackContext) -> None:
+async def add_allowed_id(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
-    if user_id != OWNER_ID:
+    if user_id not in sudo_ids:
         await update.message.reply_text("You do not have permission to use this command.")
         return
-    
     try:
-        target_id = int(context.args[0])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please provide a valid user ID.")
-        return
-    
-    allowed_ids.add(target_id)
-    save_allowed_ids(allowed_ids)
-    await update.message.reply_text(f"User {target_id} has been granted permission to use the bot.")
-
-async def revoke(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        await update.message.reply_text("You do not have permission to use this command.")
-        return
-    
-    try:
-        target_id = int(context.args[0])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please provide a valid user ID.")
-        return
-    
-    if target_id in allowed_ids:
-        allowed_ids.remove(target_id)
+        new_id = int(context.args[0])
+        allowed_ids.add(new_id)
         save_allowed_ids(allowed_ids)
-        await update.message.reply_text(f"User {target_id} has been revoked permission to use the bot.")
-    else:
-        await update.message.reply_text(f"User {target_id} does not have permission to be revoked.")
+        await update.message.reply_text(f"User ID {new_id} has been added to the allowed list.")
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid user ID.")
 
-async def sudo(update: Update, context: CallbackContext) -> None:
+async def remove_allowed_id(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id not in sudo_ids:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+    try:
+        remove_id = int(context.args[0])
+        if remove_id in allowed_ids:
+            allowed_ids.remove(remove_id)
+            save_allowed_ids(allowed_ids)
+            await update.message.reply_text(f"User ID {remove_id} has been removed from the allowed list.")
+        else:
+            await update.message.reply_text(f"User ID {remove_id} is not in the allowed list.")
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid user ID.")
+
+async def add_sudo_id(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
         await update.message.reply_text("You do not have permission to use this command.")
         return
-    
     try:
-        target_id = int(context.args[0])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please provide a valid user ID.")
-        return
-    
-    sudo_ids.add(target_id)
-    save_sudo_ids(sudo_ids)
-    await update.message.reply_text(f"User {target_id} has been granted sudo access.")
-
-async def unsudo(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        await update.message.reply_text("You do not have permission to use this command.")
-        return
-    
-    try:
-        target_id = int(context.args[0])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please provide a valid user ID.")
-        return
-    
-    if target_id in sudo_ids:
-        sudo_ids.remove(target_id)
+        new_id = int(context.args[0])
+        sudo_ids.add(new_id)
         save_sudo_ids(sudo_ids)
-        await update.message.reply_text(f"User {target_id} has been revoked sudo access.")
-    else:
-        await update.message.reply_text(f"User {target_id} does not have sudo access to be revoked.")
+        await update.message.reply_text(f"User ID {new_id} has been added to the sudo list.")
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid user ID.")
 
-def main() -> None:
-    global start_date, user_ids, allowed_ids, sudo_ids
-    start_date, user_ids = load_bot_data()
-    allowed_ids = load_allowed_ids()
-    sudo_ids = load_sudo_ids()
-    
+async def remove_sudo_id(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+    try:
+        remove_id = int(context.args[0])
+        if remove_id in sudo_ids:
+            sudo_ids.remove(remove_id)
+            save_sudo_ids(sudo_ids)
+            await update.message.reply_text(f"User ID {remove_id} has been removed from the sudo list.")
+        else:
+            await update.message.reply_text(f"User ID {remove_id} is not in the sudo list.")
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please provide a valid user ID.")
+
+async def check_permissions(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    permissions = []
+    if user_id in allowed_ids:
+        permissions.append("allowed")
+    if user_id in sudo_ids:
+        permissions.append("sudo")
+    if user_id == OWNER_ID:
+        permissions.append("owner")
+    if permissions:
+        await update.message.reply_text(f"You have the following permissions: {', '.join(permissions)}")
+    else:
+        await update.message.reply_text("You do not have any special permissions.")
+
+def main():
     application = Application.builder().token(token).build()
     
     application.add_handler(CommandHandler("start", start))
@@ -322,12 +313,16 @@ def main() -> None:
     application.add_handler(CommandHandler("lottery", lottery))
     application.add_handler(CommandHandler("joinlottery", join_lottery))
     application.add_handler(CommandHandler("endlottery", end_lottery))
-    application.add_handler(CommandHandler("grant", grant))
-    application.add_handler(CommandHandler("revoke", revoke))
-    application.add_handler(CommandHandler("sudo", sudo))
-    application.add_handler(CommandHandler("unsudo", unsudo))
+    application.add_handler(CommandHandler("addallowedid", add_allowed_id))
+    application.add_handler(CommandHandler("removeallowedid", remove_allowed_id))
+    application.add_handler(CommandHandler("addsudoid", add_sudo_id))
+    application.add_handler(CommandHandler("removesudoid", remove_sudo_id))
+    application.add_handler(CommandHandler("checkpermissions", check_permissions))
     
     application.run_polling()
 
 if __name__ == '__main__':
+    start_date, user_ids = load_bot_data()
+    allowed_ids = load_allowed_ids()
+    sudo_ids = load_sudo_ids()
     main()
