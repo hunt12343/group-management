@@ -189,6 +189,26 @@ async def broadcast(update: Update, context: CallbackContext) -> None:
         except Exception as e:
             logger.error(f"Failed to send message to {uid}: {e}")
 
+async def backup(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    files_to_send = [BOT_DATA_FILE, ALLOWED_IDS_FILE, SUDO_IDS_FILE, USERS_FILE]
+
+    for file_path in files_to_send:
+        try:
+            with open(file_path, 'rb') as file:
+                await context.bot.send_document(chat_id=OWNER_ID, document=file, filename=os.path.basename(file_path))
+        except FileNotFoundError:
+            await update.message.reply_text(f"File {file_path} not found.")
+        except Exception as e:
+            logger.error(f"Error sending file {file_path}: {e}")
+            await update.message.reply_text(f"Error sending file {file_path}: {str(e)}")
+
+    await update.message.reply_text("Backup completed successfully.")
+
 async def inline_start(update: Update, context: CallbackContext) -> None:
     button = InlineKeyboardButton("Start Bot", url=f"https://t.me/{context.bot.username}?start=start")
     reply_markup = InlineKeyboardMarkup([[button]])
@@ -280,6 +300,7 @@ application.add_handler(CommandHandler("add_allowed_id", add_allowed_id))
 application.add_handler(CommandHandler("remove_allowed_id", remove_allowed_id))
 application.add_handler(CommandHandler("add_sudo_id", add_sudo_id))
 application.add_handler(CommandHandler("remove_sudo_id", remove_sudo_id))
+application.add_handler(CommandHandler("backup", backup))
 
 if __name__ == '__main__':
     start_date, user_ids = load_bot_data()
