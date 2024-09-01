@@ -5,7 +5,7 @@ import secrets
 import logging
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackContext, filters
+from telegram.ext import Application, CommandHandler, CallbackContext, filters, MessageHandler
 from token_1 import token
 from telegram import ChatMemberAdministrator, ChatMemberOwner
 from telegram.error import Unauthorized
@@ -31,6 +31,20 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+# Use this to debug global variables initialization
+def debug_globals():
+    logger.info(f"Global Variables:")
+    logger.info(f"OWNER_ID: {OWNER_ID}")
+    logger.info(f"lottery_entries: {lottery_entries}")
+    logger.info(f"lottery_active: {lottery_active}")
+    logger.info(f"tag_quiz_users: {tag_quiz_users}")
+    logger.info(f"USERS_FILE: {USERS_FILE}")
+    logger.info(f"MESSAGE_COUNT: {MESSAGE_COUNT}")
+    logger.info(f"SKIP_COUNT: {SKIP_COUNT}")
+    logger.info(f"ADMIN_TAG_INTERVAL: {ADMIN_TAG_INTERVAL}")
+    logger.info(f"SKIP_MESSAGES: {SKIP_MESSAGES}")
+    logger.info(f"LAST_POLLED_BOT_ID: {LAST_POLLED_BOT_ID}")
 
 def load_json_data(filename, default):
     if os.path.exists(filename):
@@ -193,7 +207,6 @@ async def broadcast(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("You are not authorized to use this command.")
         return
 
-    user_ids = list(user_ids)  # Convert set to list for iteration
     message_text = update.message.text.split(None, 1)[1]
     failed_users = []
 
@@ -311,6 +324,9 @@ async def remove_sudo_id(update: Update, context: CallbackContext) -> None:
 
 def main():
     global start_date, user_ids, allowed_ids, sudo_ids, tag_quiz_users
+
+    debug_globals()  # Add this line to see global variables initialization
+    
     start_date, user_ids = load_bot_data()
     allowed_ids = load_allowed_ids()
     sudo_ids = load_sudo_ids()
@@ -335,7 +351,7 @@ def main():
     application.add_handler(CommandHandler("tagquiz_enable", tagquiz_enable))
     application.add_handler(CommandHandler("tagquiz_disable", tagquiz_disable))
 
-    application.add_handler(filters.MessageHandler(filters.TEXT, message_handler))
+    application.add_handler(MessageHandler(filters.TEXT, message_handler))
 
     application.run_polling()
 
