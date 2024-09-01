@@ -7,6 +7,7 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackContext
 from token_1 import token
+from telegram import ChatMemberAdministrator, ChatMemberOwner
 
 # Global variables
 OWNER_ID = 5667016949
@@ -15,7 +16,14 @@ lottery_active = False
 BOT_DATA_FILE = 'bot_data.json'
 ALLOWED_IDS_FILE = 'allowed_ids.json'
 SUDO_IDS_FILE = 'sudo_ids.json'
+TAG_QUIZ_USERS_FILE = 'tag_quiz_users.json'
+tag_quiz_users = set()
 USERS_FILE = 'users.json'
+MESSAGE_COUNT = 0
+SKIP_COUNT = 0
+ADMIN_TAG_INTERVAL = 90
+SKIP_MESSAGES = 10
+LAST_POLLED_BOT_ID = 5732300001
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -59,6 +67,14 @@ def save_allowed_ids(allowed_ids):
 
 def load_sudo_ids():
     return set(load_json_data(SUDO_IDS_FILE, [OWNER_ID]))
+
+def load_tag_quiz_users():
+    global tag_quiz_users
+    tag_quiz_users = set(load_json_data(TAG_QUIZ_USERS_FILE, []))
+
+def save_tag_quiz_users():
+    save_json_data(TAG_QUIZ_USERS_FILE, list(tag_quiz_users))
+
 
 def save_sudo_ids(sudo_ids):
     save_json_data(SUDO_IDS_FILE, {"user_ids": list(sudo_ids)})
@@ -173,6 +189,39 @@ async def profile(update: Update, context: CallbackContext) -> None:
         profile_message = "You have not started using the bot yet. Use /start to begin."
     
     await update.message.reply_text(profile_message)
+    
+async def tag_admins(context: CallbackContext, chat_id: int) -> None:
+    admins = await context.bot.get_chat_administrators(chat_id)
+    admin_ids = [admin.user.id for admin in admins]
+    admin_mentions = [f"@{admin.user.username}" if admin.user.username else admin.user.first_name for admin in admins]
+
+    # Tag quiz users
+    quiz_user_mentions = [f"<a href='tg://user?id={user_id}'>User</a>" for user_id in tag_quiz_users]
+    
+    await context.bot.send_message(chat_id=chat_id, text=" ".join(admin_mentions + quiz_user_mentions), parse_mode="HTML")
+
+
+async def message_handler(update: Update, context: CallbackContext) -> None:
+    global MESSAGE_COUNT, SKIP_COUNT
+
+    if SKIP_COUNT > 0:
+        SKIP_COUNT -= 1
+        return
+
+    MESSAGE_COUNT += 1
+
+    if MESSAGE_COUNT >= ADMIN_TAG_INTERVAL:
+        chat_id = update.effective_chat.id
+        await tag_admins(context, chat_id)
+        MESSAGE_COUNT = 0
+        SKIP_COUNT = SKIP_MESSAGES
+
+async def poll_handler(update: Update, context: CallbackContext) -> None:
+    global MESSAGE_COUNT
+    poll_bot_id = update.effective_message.from_user.id
+
+    if poll_bot_id == LAST_POLLED_BOT_ID:
+        MESSAGE_COUNT = 0    
 
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -208,6 +257,25 @@ async def backup(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text(f"Error sending file {file_path}: {str(e)}")
 
     await update.message.reply_text("Backup completed successfully.")
+
+async def tagquiz_enable(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id not in tag_quiz_users:
+        tag_quiz_users.add(user_id)
+        save_tag_quiz_users()
+        await update.message.reply_text("Tag quiz enabled. You will be tagged.")
+    else:
+        await update.message.reply_text("You have already enabled the tag quiz.")
+
+async def tagquiz_disable(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id in tag_quiz_users:
+        tag_quiz_users.remove(user_id)
+        save_tag_quiz_users()
+        await update.message.reply_text("Tag quiz disabled. You will not be tagged.")
+    else:
+        await update.message.reply_text("You have not enabled the tag quiz.")
+
 
 async def inline_start(update: Update, context: CallbackContext) -> None:
     button = InlineKeyboardButton("Start Bot", url=f"https://t.me/{context.bot.username}?start=start")
@@ -301,9 +369,12 @@ application.add_handler(CommandHandler("remove_allowed_id", remove_allowed_id))
 application.add_handler(CommandHandler("add_sudo_id", add_sudo_id))
 application.add_handler(CommandHandler("remove_sudo_id", remove_sudo_id))
 application.add_handler(CommandHandler("backup", backup))
+application.add_handler(CommandHandler("tagquiz", tagquiz_enable, filters.Command(["e"])))
+application.add_handler(CommandHandler("tagquiz", tagquiz_disable, filters.Command(["d"])))
 
 if __name__ == '__main__':
     start_date, user_ids = load_bot_data()
     allowed_ids = load_allowed_ids()
     sudo_ids = load_sudo_ids()
+    load_tag_quiz_users()
     application.run_polling()
