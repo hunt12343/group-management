@@ -93,15 +93,15 @@ def escape_markdown_v2(text):
     
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
-    user_id = user.id
+    user_id = str(user.id)  # Changed to string for consistency in key storage
 
     users = load_users()
 
-    if str(user_id) not in users:
+    if user_id not in users:
         # Initialize user data
-        users[str(user_id)] = {
-            "user_id": user_id,
-            "join_date": datetime.now().strftime('%m/%d/%y'),
+        users[user_id] = {
+            "user_id": user.id,
+            "join_date": datetime.now().strftime('%Y-%m-%d'),
             "credits": 50000,  # Starting credits
             "daily": None,
             "win": 0,
@@ -112,10 +112,14 @@ async def start(update: Update, context: CallbackContext) -> None:
             "title": "None"
         }
         save_users(users)
-    
-    await update.message.reply_text(
-        "Welcome! You've received 50,000 credits to start betting. Use /profile to check your details."
-    )
+        await update.message.reply_text(
+            "Welcome! You've received 50,000 credits to start betting. Use /profile to check your details."
+        )
+    else:
+        await update.message.reply_text(
+            "You've already started the bot. Use /profile to check your details."
+        )
+
 async def flip(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
@@ -126,27 +130,36 @@ async def flip(update: Update, context: CallbackContext) -> None:
         return
 
     try:
-        choice, bet_amount = context.args[0], int(context.args[1])
+        choice, bet_amount = context.args[0].upper(), int(context.args[1])
     except (IndexError, ValueError):
-        await update.message.reply_text("Please use the format: /flip T 500")
+        await update.message.reply_text("Please use the format: /flip H 500 (H for Heads, T for Tails)")
         return
 
-    if choice not in ["H", "T"] or bet_amount <= 0 or bet_amount > users[user_id]["credits"]:
-        await update.message.reply_text("Invalid choice or insufficient credits.")
+    if choice not in ["H", "T"]:
+        await update.message.reply_text("Invalid choice. Choose either 'H' for heads or 'T' for tails.")
+        return
+
+    if bet_amount <= 0:
+        await update.message.reply_text("Bet amount must be a positive number.")
+        return
+
+    if bet_amount > users[user_id]["credits"]:
+        await update.message.reply_text("You don't have enough credits for this bet.")
         return
 
     result = secrets.choice(["H", "T"])
     if result == choice:
         users[user_id]["credits"] += bet_amount
         users[user_id]["win"] += 1
-        message = f"You won! {bet_amount} credits have been added to your profile."
+        message = f"🎉 You won! {bet_amount} credits have been added to your profile."
     else:
         users[user_id]["credits"] -= bet_amount
         users[user_id]["loss"] += 1
-        message = f"You lost! {bet_amount} credits have been deducted from your profile."
+        message = f"😞 You lost! {bet_amount} credits have been deducted from your profile."
 
     save_users(users)
     await update.message.reply_text(message)
+
 
 async def bet(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
@@ -231,6 +244,7 @@ async def expire(update: Update, context: CallbackContext) -> None:
 async def profile(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
+
     users = load_users()
 
     if user_id in users:
@@ -238,10 +252,11 @@ async def profile(update: Update, context: CallbackContext) -> None:
         profile_message = (
             f"👤 Name: {user.first_name} 【{user_data['faction']}】\n"
             f"🆔 ID: {user_data['user_id']}\n"
-            f"Credits: {user_data['credits']} 👾\n\n"
-            f"Win: {user_data['win']}\n"
-            f"Loss: {user_data['loss']}\n\n"
-            f"{user_data['title']}\n"
+            f"🎟 Credits: {user_data['credits']}\n"
+            f"🏆 Wins: {user_data['win']}\n"
+            f"💔 Losses: {user_data['loss']}\n"
+            f"🎖 Title: {user_data['title']}\n"
+            f"📅 Joined: {user_data['join_date']}\n"
         )
     else:
         profile_message = "You have not started using the bot yet. Use /start to begin."
