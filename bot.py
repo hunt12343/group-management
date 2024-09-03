@@ -93,15 +93,15 @@ def escape_markdown_v2(text):
     
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
-    user_id = str(user.id)  # Changed to string for consistency in key storage
+    user_id = str(user.id)  # Convert to string to match JSON storage
 
     users = load_users()
 
     if user_id not in users:
         # Initialize user data
         users[user_id] = {
-            "user_id": user.id,
-            "join_date": datetime.now().strftime('%Y-%m-%d'),
+            "user_id": user_id,
+            "join_date": datetime.now().strftime('%m/%d/%y'),
             "credits": 50000,  # Starting credits
             "daily": None,
             "win": 0,
@@ -112,13 +112,34 @@ async def start(update: Update, context: CallbackContext) -> None:
             "title": "None"
         }
         save_users(users)
-        await update.message.reply_text(
-            "Welcome! You've received 50,000 credits to start betting. Use /profile to check your details."
+        logger.info(f"User {user_id} started the bot.")
+
+    await update.message.reply_text(
+        "Welcome! You've received 50,000 credits to start betting. Use /profile to check your details."
+    )
+
+async def profile(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    user_id = str(user.id)  # Ensure consistency with stored ID
+    users = load_users()
+
+    if user_id in users:
+        user_data = users[user_id]
+        profile_message = (
+            f"👤 Name: {user.first_name} 【{user_data['faction']}】\n"
+            f"🆔 ID: {user_data['user_id']}\n"
+            f"Credits: {user_data['credits']} 👾\n\n"
+            f"Win: {user_data['win']}\n"
+            f"Loss: {user_data['loss']}\n\n"
+            f"{user_data['title']}\n"
         )
+        logger.info(f"User {user_id} checked their profile.")
     else:
-        await update.message.reply_text(
-            "You've already started the bot. Use /profile to check your details."
-        )
+        profile_message = "You have not started using the bot yet. Use /start to begin."
+        logger.warning(f"User {user_id} tried to check profile without starting the bot.")
+
+    await update.message.reply_text(profile_message)
+
 
 async def flip(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
@@ -240,29 +261,6 @@ async def dart(update: Update, context: CallbackContext) -> None:
 
 async def expire(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text("Your all bets are expired")
-
-async def profile(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    user_id = str(user.id)
-
-    users = load_users()
-
-    if user_id in users:
-        user_data = users[user_id]
-        profile_message = (
-            f"👤 Name: {user.first_name} 【{user_data['faction']}】\n"
-            f"🆔 ID: {user_data['user_id']}\n"
-            f"🎟 Credits: {user_data['credits']}\n"
-            f"🏆 Wins: {user_data['win']}\n"
-            f"💔 Losses: {user_data['loss']}\n"
-            f"🎖 Title: {user_data['title']}\n"
-            f"📅 Joined: {user_data['join_date']}\n"
-        )
-    else:
-        profile_message = "You have not started using the bot yet. Use /start to begin."
-
-    await update.message.reply_text(profile_message)
-
 
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
