@@ -64,12 +64,13 @@ def load_sudo_ids():
 def save_sudo_ids(sudo_ids):
     save_json_data(SUDO_IDS_FILE, {"user_ids": list(sudo_ids)})
 
-# User data functions
 def load_users():
+    """Loads the users data from USERS_FILE."""
     return load_json_data(USERS_FILE, {})
 
 def save_users(users):
-    save_json_data(USERS_FILE, {"users": users})
+    """Saves the users data to USERS_FILE."""
+    save_json_data(USERS_FILE, users)
 
 def update_user_credits(user_id, amount):
     users = load_users()
@@ -139,7 +140,6 @@ async def profile(update: Update, context: CallbackContext) -> None:
         logger.warning(f"User {user_id} tried to check profile without starting the bot.")
 
     await update.message.reply_text(profile_message)
-
 
 async def flip(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
