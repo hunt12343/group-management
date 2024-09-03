@@ -4,7 +4,7 @@ import os
 import secrets
 import logging
 from datetime import datetime
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import Application, CommandHandler, CallbackContext
 from token_1 import token
 
@@ -121,25 +121,84 @@ async def start(update: Update, context: CallbackContext) -> None:
 
 async def profile(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
-    user_id = str(user.id)  # Ensure consistency with stored ID
+    user_id = str(user.id)
     users = load_users()
 
     if user_id in users:
         user_data = users[user_id]
         profile_message = (
-            f"👤 Name: {user.first_name} 【{user_data['faction']}】\n"
-            f"🆔 ID: {user_data['user_id']}\n"
-            f"Credits: {user_data['credits']} 👾\n\n"
-            f"Win: {user_data['win']}\n"
-            f"Loss: {user_data['loss']}\n\n"
-            f"{user_data['title']}\n"
+            f"👤 *{user.first_name}* 【{user_data['faction']}】\n"
+            f"🆔 *ID*: {user_data['user_id']}\n"
+            f"💰 *Units*: {user_data['credits']} 💎\n\n"
+            f"🏆 *Wins*: {user_data['win']}\n"
+            f"💔 *Losses*: {user_data['loss']}\n\n"
+            f"🎖️ *Title*: {user_data['title']}\n"
         )
-        logger.info(f"User {user_id} checked their profile.")
-    else:
-        profile_message = "You have not started using the bot yet. Use /start to begin."
-        logger.warning(f"User {user_id} tried to check profile without starting the bot.")
 
-    await update.message.reply_text(profile_message)
+        # Send the profile picture
+        try:
+            photos = await context.bot.get_user_profile_photos(user_id=user.id)
+            if photos.total_count > 0:
+                await update.message.reply_photo(photos.photos[0][-1].file_id, caption=profile_message, parse_mode='Markdown')
+            else:
+                await update.message.reply_text(profile_message, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Error fetching profile picture for user {user_id}: {e}")
+            await update.message.reply_text(profile_message, parse_mode='Markdown')
+    else:
+        await update.message.reply_text("You have not started using the bot yet. Use /start to begin.")
+
+async def add_units(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    try:
+        target_id = context.args[0]
+        amount = int(context.args[1])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please use the format: /add <user_id> <amount>")
+        return
+
+    users = load_users()
+    if target_id in users:
+        users[target_id]["credits"] += amount
+        save_users(users)
+        await update.message.reply_text(f"Successfully added {amount} units to user {target_id}.")
+    else:
+        await update.message.reply_text("User not found.")
+
+# New Game Example: Roulette
+async def roulette(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    user_id = str(user.id)
+    users = load_users()
+
+    if user_id not in users:
+        await update.message.reply_text("You need to start the bot first by using /start.")
+        return
+
+    try:
+        bet_amount = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please use the format: /roulette <amount>")
+        return
+
+    if bet_amount <= 0 or bet_amount > users[user_id]["credits"]:
+        await update.message.reply_text("Invalid bet amount or insufficient credits.")
+        return
+
+    result = secrets.choice(["win", "lose"])
+    if result == "win":
+        users[user_id]["credits"] += bet_amount * 2
+        message = f"🎉 You won! Your bet doubled to {bet_amount * 2} units."
+    else:
+        users[user_id]["credits"] -= bet_amount
+        message = f"😞 You lost! {bet_amount} units have been deducted from your profile."
+
+    save_users(users)
+    await update.message.reply_text(message)
 
 async def flip(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
@@ -259,9 +318,6 @@ async def dart(update: Update, context: CallbackContext) -> None:
     else:
         await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🎯')
 
-async def expire(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("Your all bets are expired")
-
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     if user_id not in allowed_ids:
@@ -380,7 +436,9 @@ application.add_handler(CommandHandler("dice", dice))
 application.add_handler(CommandHandler("football", football))
 application.add_handler(CommandHandler("basketball", basketball))
 application.add_handler(CommandHandler("dart", dart))
-application.add_handler(CommandHandler("expire", expire))
+application.add_handler(CommandHandler("bet", bet))
+application.add_handler(CommandHandler("add", add_units))
+application.add_handler(CommandHandler("roulette", roulette))
 application.add_handler(CommandHandler("profile", profile))
 application.add_handler(CommandHandler("broadcast", broadcast))
 application.add_handler(CommandHandler("backup", backup))
