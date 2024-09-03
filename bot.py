@@ -32,6 +32,7 @@ def save_json_data(filename, data):
     with open(filename, 'w') as file:
         json.dump(data, file, indent=4)
 
+# Bot data functions
 def load_bot_data():
     data = load_json_data(BOT_DATA_FILE, {})
     if data:
@@ -50,6 +51,7 @@ def save_bot_data(start_date, user_ids):
     }
     save_json_data(BOT_DATA_FILE, data)
 
+# ID management functions
 def load_allowed_ids():
     return set(load_json_data(ALLOWED_IDS_FILE, [OWNER_ID]))
 
@@ -62,48 +64,122 @@ def load_sudo_ids():
 def save_sudo_ids(sudo_ids):
     save_json_data(SUDO_IDS_FILE, {"user_ids": list(sudo_ids)})
 
+# User data functions
 def load_users():
     return load_json_data(USERS_FILE, {})
 
 def save_users(users):
-    save_json_data(USERS_FILE, users)
+    save_json_data(USERS_FILE, {"users": users})
 
+def update_user_credits(user_id, amount):
+    users = load_users()
+    if str(user_id) in users:
+        users[str(user_id)]["credits"] += amount
+        save_users(users)
+
+def update_user_win_loss(user_id, win=True):
+    users = load_users()
+    if str(user_id) in users:
+        if win:
+            users[str(user_id)]["win"] += 1
+        else:
+            users[str(user_id)]["loss"] += 1
+        save_users(users)
+
+# Markdown escaping for Telegram messages
 def escape_markdown_v2(text):
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
     return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
-
+    
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = user.id
-    user_ids.add(user_id)
-    save_bot_data(start_date, user_ids)
 
     users = load_users()
 
-    # Check if user is already in the database
     if str(user_id) not in users:
-        # Add user to the database with initial values
+        # Initialize user data
         users[str(user_id)] = {
-            "first_name": user.first_name,
-            "start_date": datetime.now().strftime('%Y-%m-%d'),
-            "wins": 0,
-            "losses": 0
+            "user_id": user_id,
+            "join_date": datetime.now().strftime('%m/%d/%y'),
+            "credits": 50000,  # Starting credits
+            "daily": None,
+            "win": 0,
+            "loss": 0,
+            "achievement": [],
+            "faction": "None",
+            "ban": None,
+            "title": "None"
         }
         save_users(users)
+    
     await update.message.reply_text(
-        "Welcome! Use /coin to flip a coin, /dice to roll a dice, /football to play football, /basketball to play basketball, /dart to play darts, and /exp to expire your bets."
+        "Welcome! You've received 50,000 credits to start betting. Use /profile to check your details."
     )
-
 async def flip(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
-    result = secrets.choice(["heads", "tails"])
-    user_link = f"<a href='tg://user?id={user.id}'>{escape_markdown_v2(user.first_name)}</a>"
-    message = f"『 {user_link} 』flipped a coin!\n\nIt's {result}! Timestamp: {datetime.now()}"
-    if update.message.reply_to_message:
-        original_msg_id = update.message.reply_to_message.message_id
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=message, parse_mode='HTML', reply_to_message_id=original_msg_id)
+    user_id = str(user.id)
+    users = load_users()
+
+    if user_id not in users:
+        await update.message.reply_text("You need to start the bot first by using /start.")
+        return
+
+    try:
+        choice, bet_amount = context.args[0], int(context.args[1])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please use the format: /flip T 500")
+        return
+
+    if choice not in ["H", "T"] or bet_amount <= 0 or bet_amount > users[user_id]["credits"]:
+        await update.message.reply_text("Invalid choice or insufficient credits.")
+        return
+
+    result = secrets.choice(["H", "T"])
+    if result == choice:
+        users[user_id]["credits"] += bet_amount
+        users[user_id]["win"] += 1
+        message = f"You won! {bet_amount} credits have been added to your profile."
     else:
-        await update.message.reply_text(message, parse_mode='HTML')
+        users[user_id]["credits"] -= bet_amount
+        users[user_id]["loss"] += 1
+        message = f"You lost! {bet_amount} credits have been deducted from your profile."
+
+    save_users(users)
+    await update.message.reply_text(message)
+
+async def bet(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    user_id = str(user.id)
+    users = load_users()
+
+    if user_id not in users:
+        await update.message.reply_text("You need to start the bot first by using /start.")
+        return
+
+    try:
+        bet_amount = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please use the format: /bet 500")
+        return
+
+    if bet_amount <= 0 or bet_amount > users[user_id]["credits"]:
+        await update.message.reply_text("Invalid bet amount or insufficient credits.")
+        return
+
+    result = secrets.choice(["win", "lose"])
+    if result == "win":
+        users[user_id]["credits"] += bet_amount
+        users[user_id]["win"] += 1
+        message = f"You won! {bet_amount} credits have been added to your profile."
+    else:
+        users[user_id]["credits"] -= bet_amount
+        users[user_id]["loss"] += 1
+        message = f"You lost! {bet_amount} credits have been deducted from your profile."
+
+    save_users(users)
+    await update.message.reply_text(message)
+
 
 async def dice(update: Update, context: CallbackContext) -> None:
     chat_type = update.effective_chat.type
@@ -154,24 +230,24 @@ async def expire(update: Update, context: CallbackContext) -> None:
 
 async def profile(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
-    user_id = user.id
-
+    user_id = str(user.id)
     users = load_users()
 
-    # Fetch user data from the database
-    if str(user_id) in users:
-        user_data = users[str(user_id)]
+    if user_id in users:
+        user_data = users[user_id]
         profile_message = (
-            f"First Name: {user_data['first_name']}\n"
-            f"User ID: {user_id}\n"
-            f"Wins: {user_data['wins']}\n"
-            f"Losses: {user_data['losses']}\n"
-            f"Started Using Bot: {user_data['start_date']}\n"
+            f"👤 Name: {user.first_name} 【{user_data['faction']}】\n"
+            f"🆔 ID: {user_data['user_id']}\n"
+            f"Credits: {user_data['credits']} 👾\n\n"
+            f"Win: {user_data['win']}\n"
+            f"Loss: {user_data['loss']}\n\n"
+            f"{user_data['title']}\n"
         )
     else:
         profile_message = "You have not started using the bot yet. Use /start to begin."
-    
+
     await update.message.reply_text(profile_message)
+
 
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
