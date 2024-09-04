@@ -11,12 +11,11 @@ from token_1 import token
 
 # Global variables
 OWNER_ID = 5667016949
-lottery_entries = {}
+players = {}
 BOT_DATA_FILE = 'bot_data.json'
 ALLOWED_IDS_FILE = 'allowed_ids.json'
 SUDO_IDS_FILE = 'sudo_ids.json'
 USERS_FILE = 'users.json'
-players = {}
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -149,71 +148,6 @@ async def profile(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text(profile_message, parse_mode='Markdown')
     else:
         await update.message.reply_text("You have not started using the bot yet. Use /start to begin.")
-
-async def add_units(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        await update.message.reply_text("You do not have permission to use this command.")
-        return
-
-    try:
-        target_id = context.args[0]
-        amount = int(context.args[1])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please use the format: /add <user_id> <amount>")
-        return
-
-    users = load_users()
-    if target_id in users:
-        users[target_id]["credits"] += amount
-        save_users(users)
-        await update.message.reply_text(f"Successfully added {amount} units to user {target_id}.")
-    else:
-        await update.message.reply_text("User not found.")
-        
-def challenge_player(challenger_id, opponent_id):
-    if opponent_id not in players:
-        return "Opponent has not started the bot yet."
-    if challenger_id not in players:
-        return "You have not started the bot yet."
-
-    players[challenger_id]['hp'] = 100
-    players[opponent_id]['hp'] = 100
-    players[challenger_id]['opponent'] = opponent_id
-    players[opponent_id]['opponent'] = challenger_id
-
-    save_players()
-    return f"Challenge accepted! {challenger_id} vs {opponent_id}. Let the battle begin!"
-
-def attack_player(attacker_id):
-    if attacker_id not in players or 'opponent' not in players[attacker_id]:
-        return "You are not in a battle."
-
-    opponent_id = players[attacker_id]['opponent']
-    damage = random.randint(5, 15)
-    players[opponent_id]['hp'] -= damage
-    
-    if players[opponent_id]['hp'] <= 0:
-        winner_id = attacker_id
-        loser_id = opponent_id
-        players[winner_id]['credits'] += 100  # Winner gains credits
-        players[loser_id]['credits'] -= 50    # Loser loses credits
-        del players[winner_id]['opponent']
-        del players[loser_id]['opponent']
-        save_players()
-        return f"{winner_id} wins the battle! {loser_id} is defeated."
-    
-    save_players()
-    return f"{attacker_id} attacks {opponent_id} for {damage} damage. {opponent_id} has {players[opponent_id]['hp']} HP left."
-
-def defend_player(defender_id):
-    if defender_id not in players or 'opponent' not in players[defender_id]:
-        return "You are not in a battle."
-
-    defense = random.randint(5, 10)
-    players[defender_id]['hp'] += defense
-    save_players()
-    return f"{defender_id} defends and restores {defense} HP. Current HP: {players[defender_id]['hp']}"
 
 async def roulette(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
@@ -391,28 +325,105 @@ async def dart(update: Update, context: CallbackContext) -> None:
     save_data()  # Save player data
     await update.message.reply_text(message)
 
-async def lottery(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-    if user_id not in players:
-        await update.message.reply_text("You need to start the bot first by using /start.")
+async def add_units(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
         return
 
-    # Buy a lottery ticket
-    ticket_number = len(lottery_tickets) + 1
-    lottery_tickets.append({"user_id": user_id, "ticket_number": ticket_number})
-    message = f"🎟️ You bought a lottery ticket number {ticket_number}."
-    await update.message.reply_text(message)
+    try:
+        target_id = context.args[0]
+        amount = int(context.args[1])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please use the format: /add <user_id> <amount>")
+        return
 
-    # Draw lottery every 10 tickets
-    if len(lottery_tickets) % 10 == 0:
-        winner = random.choice(lottery_tickets)
-        winner_id = winner["user_id"]
-        players[winner_id]["credits"] += jackpot
-        message = f"🎉 Congratulations {winner_id}! You won the lottery and received {jackpot} credits."
-        lottery_tickets.clear()  # Clear tickets after draw
-        save_data()  # Save player data
-        await update.message.reply_text(message)
+    users = load_users()
+    if target_id in users:
+        users[target_id]["credits"] += amount
+        save_users(users)
+        await update.message.reply_text(f"Successfully added {amount} units to user {target_id}.")
+    else:
+        await update.message.reply_text("User not found.")
 
+# PvP battle functions
+def save_players():
+    save_json_data('players.json', players)
+
+def load_players():
+    global players
+    players = load_json_data('players.json', {})
+
+def challenge_player(challenger_id, opponent_id):
+    load_players()
+    if opponent_id not in players:
+        return "Opponent has not started the bot yet."
+    if challenger_id not in players:
+        return "You have not started the bot yet."
+
+    players[challenger_id]['hp'] = 100
+    players[opponent_id]['hp'] = 100
+    players[challenger_id]['opponent'] = opponent_id
+    players[opponent_id]['opponent'] = challenger_id
+
+    save_players()
+    return f"Challenge accepted! {challenger_id} vs {opponent_id}. Let the battle begin!"
+
+def attack_player(attacker_id):
+    load_players()
+    if attacker_id not in players or 'opponent' not in players[attacker_id]:
+        return "You are not in a battle."
+
+    opponent_id = players[attacker_id]['opponent']
+    damage = random.randint(5, 15)
+    players[opponent_id]['hp'] -= damage
+    
+    if players[opponent_id]['hp'] <= 0:
+        winner_id = attacker_id
+        loser_id = opponent_id
+        players[winner_id]['credits'] += 100  # Winner gains credits
+        players[loser_id]['credits'] -= 50    # Loser loses credits
+        del players[winner_id]['opponent']
+        del players[loser_id]['opponent']
+        save_players()
+        return f"{winner_id} wins the battle! {loser_id} is defeated."
+    
+    save_players()
+    return f"{attacker_id} attacks {opponent_id} for {damage} damage. {opponent_id} has {players[opponent_id]['hp']} HP left."
+
+def defend_player(defender_id):
+    load_players()
+    if defender_id not in players or 'opponent' not in players[defender_id]:
+        return "You are not in a battle."
+
+    defense = random.randint(5, 10)
+    players[defender_id]['hp'] += defense
+    save_players()
+    return f"{defender_id} defends and restores {defense} HP. Current HP: {players[defender_id]['hp']}"
+
+# Command for initiating a PvP challenge
+async def challenge(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    try:
+        opponent_id = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please use the format: /challenge <opponent_id>")
+        return
+
+    result = challenge_player(user.id, opponent_id)
+    await update.message.reply_text(result)
+
+# Command for attacking in PvP battle
+async def attack(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    result = attack_player(user.id)
+    await update.message.reply_text(result)
+
+# Command for defending in PvP battle
+async def defend(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    result = defend_player(user.id)
+    await update.message.reply_text(result)
 
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -489,9 +500,12 @@ async def remove_sudo_id(update: Update, context: CallbackContext) -> None:
     else:
         await update.message.reply_text(f"User ID {remove_id} was not found in sudo IDs.")
 
-# Initialize application and handlers
-application = Application.builder().token(token).build()
-application.add_handler(CommandHandler("start", start))
+
+def main():
+    application = Application.builder().token(token).build()
+
+    # Add command handlers
+application.add_handler(CommandHandler('start', start))
 application.add_handler(CommandHandler("flip", flip))
 application.add_handler(CommandHandler("dice", dice))
 application.add_handler(CommandHandler("football", football))
@@ -511,9 +525,11 @@ application.add_handler(CommandHandler("backup", backup))
 application.add_handler(CommandHandler("inline_start", inline_start))
 application.add_handler(CommandHandler("add_sudo_id", add_sudo_id))
 application.add_handler(CommandHandler("remove_sudo_id", remove_sudo_id))
+application.add_handler(CommandHandler('challenge', challenge))
+application.add_handler(CommandHandler('attack', attack))
+application.add_handler(CommandHandler('defend', defend))
+
+    application.run_polling()
 
 if __name__ == '__main__':
-    start_date, user_ids = load_bot_data()
-    allowed_ids = load_allowed_ids()
-    sudo_ids = load_sudo_ids()
-    application.run_polling()
+    main()
