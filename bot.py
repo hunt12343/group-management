@@ -93,7 +93,7 @@ def update_user_win_loss(user_id, win=True):
 def escape_markdown_v2(text):
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
     return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
-    
+
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)  # Convert to string to match JSON storage
