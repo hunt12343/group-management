@@ -345,86 +345,6 @@ async def add_units(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"Successfully added {amount} units to user {target_id}.")
     else:
         await update.message.reply_text("User not found.")
-
-# PvP battle functions
-def save_players():
-    save_json_data('players.json', players)
-
-def load_players():
-    global players
-    players = load_json_data('players.json', {})
-
-def challenge_player(challenger_id, opponent_id):
-    load_players()
-    if opponent_id not in players:
-        return "Opponent has not started the bot yet."
-    if challenger_id not in players:
-        return "You have not started the bot yet."
-
-    players[challenger_id]['hp'] = 100
-    players[opponent_id]['hp'] = 100
-    players[challenger_id]['opponent'] = opponent_id
-    players[opponent_id]['opponent'] = challenger_id
-
-    save_players()
-    return f"Challenge accepted! {challenger_id} vs {opponent_id}. Let the battle begin!"
-
-def attack_player(attacker_id):
-    load_players()
-    if attacker_id not in players or 'opponent' not in players[attacker_id]:
-        return "You are not in a battle."
-
-    opponent_id = players[attacker_id]['opponent']
-    damage = random.randint(5, 15)
-    players[opponent_id]['hp'] -= damage
-    
-    if players[opponent_id]['hp'] <= 0:
-        winner_id = attacker_id
-        loser_id = opponent_id
-        players[winner_id]['credits'] += 100  # Winner gains credits
-        players[loser_id]['credits'] -= 50    # Loser loses credits
-        del players[winner_id]['opponent']
-        del players[loser_id]['opponent']
-        save_players()
-        return f"{winner_id} wins the battle! {loser_id} is defeated."
-    
-    save_players()
-    return f"{attacker_id} attacks {opponent_id} for {damage} damage. {opponent_id} has {players[opponent_id]['hp']} HP left."
-
-def defend_player(defender_id):
-    load_players()
-    if defender_id not in players or 'opponent' not in players[defender_id]:
-        return "You are not in a battle."
-
-    defense = random.randint(5, 10)
-    players[defender_id]['hp'] += defense
-    save_players()
-    return f"{defender_id} defends and restores {defense} HP. Current HP: {players[defender_id]['hp']}"
-
-# Command for initiating a PvP challenge
-async def challenge(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    try:
-        opponent_id = int(context.args[0])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please use the format: /challenge <opponent_id>")
-        return
-
-    result = challenge_player(user.id, opponent_id)
-    await update.message.reply_text(result)
-
-# Command for attacking in PvP battle
-async def attack(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    result = attack_player(user.id)
-    await update.message.reply_text(result)
-
-# Command for defending in PvP battle
-async def defend(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    result = defend_player(user.id)
-    await update.message.reply_text(result)
-
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     if user_id not in allowed_ids:
@@ -510,13 +430,10 @@ application.add_handler(CommandHandler("flip", flip))
 application.add_handler(CommandHandler("dice", dice))
 application.add_handler(CommandHandler("football", football))
 application.add_handler(CommandHandler("basketball", basketball))
-application.add_handler(CommandHandler("pvp", pvp))
 application.add_handler(CommandHandler("lottery", lottery))
 application.add_handler(CommandHandler("dart", dart))
 application.add_handler(CommandHandler("bet", bet))
 application.add_handler(CommandHandler("challenge", challenge))
-application.add_handler(CommandHandler("attack", attack))
-application.add_handler(CommandHandler("defend", defend))
 application.add_handler(CommandHandler("add", add_units))
 application.add_handler(CommandHandler("roulette", roulette))
 application.add_handler(CommandHandler("profile", profile))
@@ -525,7 +442,6 @@ application.add_handler(CommandHandler("backup", backup))
 application.add_handler(CommandHandler("inline_start", inline_start))
 application.add_handler(CommandHandler("add_sudo_id", add_sudo_id))
 application.add_handler(CommandHandler("remove_sudo_id", remove_sudo_id))
-application.add_handler(CommandHandler('challenge', challenge))
 application.add_handler(CommandHandler('attack', attack))
 application.add_handler(CommandHandler('defend', defend))
 
