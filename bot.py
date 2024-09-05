@@ -80,9 +80,13 @@ async def start(update: Update, context: CallbackContext) -> None:
         save_users(users)
         logger.info(f"User {user_id} started the bot.")
 
-    await update.message.reply_text(
-        "Welcome! You've received 50,000 credits to start betting. Use /profile to check your details."
-    )
+        await update.message.reply_text(
+            "Welcome! You've received 50,000 credits to start betting. Use /profile to check your details."
+        )
+    else:
+        await update.message.reply_text(
+            "You have already started the bot. Use /profile to view your details."
+        )
 
 # Profile function
 async def profile(update: Update, context: CallbackContext) -> None:
