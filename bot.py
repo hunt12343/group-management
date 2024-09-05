@@ -68,7 +68,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         users[user_id] = {
             "user_id": user_id,
             "join_date": datetime.now().strftime('%m/%d/%y'),
-            "credits": 50000,  # Starting credits
+            "credits": 5000,  # Starting credits
             "daily": None,
             "win": 0,
             "loss": 0,
@@ -81,7 +81,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         logger.info(f"User {user_id} started the bot.")
 
         await update.message.reply_text(
-            "Welcome! You've received 50,000 credits to start betting. Use /profile to check your details."
+            "Welcome! You've received 5000 credits to start betting. Use /profile to check your details."
         )
     else:
         await update.message.reply_text(
