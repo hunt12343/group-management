@@ -317,7 +317,7 @@ def main():
     application.add_handler(CommandHandler('bet', bet))
     application.add_handler(CommandHandler('add', add_units))
     application.add_handler(CommandHandler('backup', backup))
-    application.add_handler(CommandHandler('broadcast', broad))
+    application.add_handler(CommandHandler('broadcast', broadcast))
     
 
     # Start polling
