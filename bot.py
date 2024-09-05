@@ -246,7 +246,63 @@ async def bet(update: Update, context: CallbackContext) -> None:
     save_users(users)
     await update.message.reply_text(message)
 
-# Adding units as admin
+async def dart(update: Update, context: CallbackContext) -> None:
+    user_id = str(update.effective_user.id)
+    users = load_users()
+
+    if user_id not in users:
+        await update.message.reply_text("You need to start the bot first by using /start.")
+        return
+
+    result = random.choice(["bullseye", "miss"])
+    if result == "bullseye":
+        users[user_id]["credits"] += 100
+        message = "🎯 Bullseye! You earned 100 credits."
+    else:
+        users[user_id]["credits"] -= 100
+        message = "🎯 Miss! You lost 100 credits."
+
+    save_users(users)  # Save user data
+    await update.message.reply_text(message)
+
+async def basketball(update: Update, context: CallbackContext) -> None:
+    user_id = str(update.effective_user.id)
+    users = load_users()
+
+    if user_id not in users:
+        await update.message.reply_text("You need to start the bot first by using /start.")
+        return
+
+    result = random.choice(["score", "miss"])
+    if result == "score":
+        users[user_id]["credits"] += 75
+        message = "🏀 Score! You earned 75 credits."
+    else:
+        users[user_id]["credits"] -= 75
+        message = "🏀 Miss! You lost 75 credits."
+
+    save_users(users)  # Save user data
+    await update.message.reply_text(message)
+
+async def football(update: Update, context: CallbackContext) -> None:
+    user_id = str(update.effective_user.id)
+    users = load_users()
+
+    if user_id not in users:
+        await update.message.reply_text("You need to start the bot first by using /start.")
+        return
+
+    result = random.choice(["goal", "miss"])
+    if result == "goal":
+        users[user_id]["credits"] += 50
+        message = "⚽ Goal! You earned 50 credits."
+    else:
+        users[user_id]["credits"] -= 50
+        message = "🚫 Miss! You lost 50 credits."
+
+    save_users(users)  # Save user data
+    await update.message.reply_text(message)
+    
 async def add_units(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
@@ -269,8 +325,7 @@ async def backup(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("You do not have permission to use this command.")
         return
 
-    files_to_send = [BOT_DATA_FILE, USERS_FILE]  # Removed ALLOWED_IDS_FILE and SUDO_IDS_FILE
-
+    files_to_send = [USERS_FILE]  
     for file_path in files_to_send:
         try:
             with open(file_path, 'rb') as file:
@@ -315,6 +370,9 @@ def main():
     application.add_handler(CommandHandler('slot', slot_machine))
     application.add_handler(CommandHandler('flip', flip))
     application.add_handler(CommandHandler('bet', bet))
+    application.add_handler(CommandHandler('dart', dart))
+    application.add_handler(CommandHandler('basketball', basketball))
+    application.add_handler(CommandHandler('football', football))
     application.add_handler(CommandHandler('add', add_units))
     application.add_handler(CommandHandler('backup', backup))
     application.add_handler(CommandHandler('broadcast', broadcast))
