@@ -216,7 +216,6 @@ async def bet(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(message)
 
 
-# Dart game function
 async def dart(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     users = load_users()
@@ -228,10 +227,12 @@ async def dart(update: Update, context: CallbackContext) -> None:
     result = random.choice(["bullseye", "miss"])
     if result == "bullseye":
         users[user_id]["credits"] += 100
-        message = "🎯 Bullseye! You earned 100 credits! 😎"
+        await update.message.reply_text("🎯")  # Send emoji first
+        message = "Bullseye! You earned 100 credits! 😎"
     else:
         users[user_id]["credits"] -= 100
-        message = "🎯 Miss! You lost 100 credits. 😢"
+        await update.message.reply_text("🎯")  # Send emoji first
+        message = "Miss! You lost 100 credits. 😢"
 
     save_users(users)  # Save user data
     await update.message.reply_text(message)
@@ -248,10 +249,12 @@ async def basketball(update: Update, context: CallbackContext) -> None:
     result = random.choice(["score", "miss"])
     if result == "score":
         users[user_id]["credits"] += 75
-        message = "🏀 Score! You earned 75 credits! 🏆"
+        await update.message.reply_text("🏀")  # Send emoji first
+        message = "Score! You earned 75 credits! 🏆"
     else:
         users[user_id]["credits"] -= 75
-        message = "🏀 Miss! You lost 75 credits. 😕"
+        await update.message.reply_text("🏀")  # Send emoji first
+        message = "Miss! You lost 75 credits. 😕"
 
     save_users(users)  # Save user data
     await update.message.reply_text(message)
@@ -268,10 +271,12 @@ async def football(update: Update, context: CallbackContext) -> None:
     result = random.choice(["goal", "miss"])
     if result == "goal":
         users[user_id]["credits"] += 50
-        message = "⚽ Goal! You earned 50 credits! 🎉"
+        await update.message.reply_text("⚽")  # Send emoji first
+        message = "Goal! You earned 50 credits! 🎉"
     else:
         users[user_id]["credits"] -= 50
-        message = "🚫 Miss! You lost 50 credits. 😔"
+        await update.message.reply_text("⚽")  # Send emoji first
+        message = "Miss! You lost 50 credits. 😔"
 
     save_users(users)  # Save user data
     await update.message.reply_text(message)
@@ -288,12 +293,15 @@ async def slot_machine(update: Update, context: CallbackContext) -> None:
     slot_emojis = ["🍒", "🍋", "🍇", "🍉", "🔔", "💎"]
     slot_result = [random.choice(slot_emojis) for _ in range(3)]
 
+    # Send slot result emojis first
+    await update.message.reply_text(f"{slot_result[0]} {slot_result[1]} {slot_result[2]}")
+
     if len(set(slot_result)) == 1:  # All three are the same
         users[user_id]["credits"] += 500
-        message = f"🎰 {slot_result[0]} {slot_result[1]} {slot_result[2]} - Jackpot! You won 500 credits! 💰"
+        message = "Jackpot! You won 500 credits! 💰"
     else:
         users[user_id]["credits"] -= 100
-        message = f"🎰 {slot_result[0]} {slot_result[1]} {slot_result[2]} - No luck this time. You lost 100 credits. 😞"
+        message = "No luck this time. You lost 100 credits. 😞"
 
     save_users(users)  # Save user data
     await update.message.reply_text(message)
