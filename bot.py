@@ -305,7 +305,42 @@ async def slot_machine(update: Update, context: CallbackContext) -> None:
 
     save_users(users)  # Save user data
 
+def generate_leaderboard_message(users, sort_by):
+    sorted_users = sorted(users.items(), key=lambda item: item[1][sort_by], reverse=True)
+    leaderboard_message = f"🏆 **Leaderboard by {sort_by.capitalize()}** 🏆\n\n"
+    for index, (user_id, user_data) in enumerate(sorted_users[:10], start=1):
+        username = f"User{user_id}"  # Adjust as needed to fetch actual username
+        value = user_data[sort_by]
+        leaderboard_message += f"{index}. {username} - {value} {sort_by}\n"
 
+    if len(sorted_users) == 0:
+        leaderboard_message = "No users available."
+        
+    return leaderboard_message
+
+# Command to display the leaderboard with buttons
+async def leaderboard(update: Update, context: CallbackContext) -> None:
+    users = load_users()
+    
+    keyboard = [
+        [InlineKeyboardButton("Credits", callback_data='credits')],
+        [InlineKeyboardButton("Wins", callback_data='wins')],
+        [InlineKeyboardButton("Losses", callback_data='losses')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message = generate_leaderboard_message(users, 'credits')
+    await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='MarkdownV2')
+
+# Callback function to handle button clicks
+async def button(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    users = load_users()
+    
+    sort_by = query.data
+    message = generate_leaderboard_message(users, sort_by)
+    
+    await query.edit_message_text(message, parse_mode='MarkdownV2')
     
 async def add_units(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -377,6 +412,8 @@ def main():
     application.add_handler(CommandHandler('dart', dart))
     application.add_handler(CommandHandler('basketball', basketball))
     application.add_handler(CommandHandler('football', football))
+    application.add_handler(CommandHandler('leaderboard', leaderboard))
+    application.add_handler(CallbackQueryHandler(button))
     application.add_handler(CommandHandler('add', add_units))
     application.add_handler(CommandHandler('backup', backup))
     application.add_handler(CommandHandler('broadcast', broadcast))
