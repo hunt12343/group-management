@@ -305,7 +305,7 @@ async def slot_machine(update: Update, context: CallbackContext) -> None:
 
     save_users(users)  # Save user data
 
-def generate_leaderboard_message(users, sort_by):
+async def leaderboard(users, sort_by):
     sorted_users = sorted(users.items(), key=lambda item: item[1][sort_by], reverse=True)
     leaderboard_message = f"🏆 **Leaderboard by {sort_by.capitalize()}** 🏆\n\n"
     for index, (user_id, user_data) in enumerate(sorted_users[:10], start=1):
