@@ -5,9 +5,9 @@ import logging
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackContext
-from token_1 import token  # Your bot token file
+from token_1 import token 
 import random
-import secrets  # For more secure randomization
+import secrets  
 
 # Global variables
 OWNER_ID = 5667016949
@@ -148,41 +148,6 @@ async def roulette(update: Update, context: CallbackContext) -> None:
     save_users(users)
     await update.message.reply_text(message)
 
-# Slot Machine game
-async def slot_machine(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    user_id = str(user.id)
-    users = load_users()
-
-    if user_id not in users:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    try:
-        bet_amount = int(context.args[0])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please use the format: /slot <amount>")
-        return
-
-    if bet_amount <= 0 or bet_amount > users[user_id]["credits"]:
-        await update.message.reply_text("Invalid bet amount or insufficient credits.")
-        return
-
-    slots = ["🍒", "🍋", "🔔", "⭐", "🍀"]
-    result = [random.choice(slots), random.choice(slots), random.choice(slots)]
-
-    if result[0] == result[1] == result[2]:
-        win_amount = bet_amount * 10
-        users[user_id]['credits'] += win_amount
-        message = f"{result} Jackpot! You win {win_amount} credits!"
-    else:
-        users[user_id]['credits'] -= bet_amount
-        message = f"{result} You lose {bet_amount} credits."
-
-    save_users(users)
-    await update.message.reply_text(message)
-
-# Coin flip
 async def flip(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     users = load_users()
@@ -250,6 +215,8 @@ async def bet(update: Update, context: CallbackContext) -> None:
     save_users(users)
     await update.message.reply_text(message)
 
+
+# Dart game function
 async def dart(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     users = load_users()
@@ -261,14 +228,15 @@ async def dart(update: Update, context: CallbackContext) -> None:
     result = random.choice(["bullseye", "miss"])
     if result == "bullseye":
         users[user_id]["credits"] += 100
-        message = "🎯 Bullseye! You earned 100 credits."
+        message = "🎯 Bullseye! You earned 100 credits! 😎"
     else:
         users[user_id]["credits"] -= 100
-        message = "🎯 Miss! You lost 100 credits."
+        message = "🎯 Miss! You lost 100 credits. 😢"
 
     save_users(users)  # Save user data
     await update.message.reply_text(message)
 
+# Basketball game function
 async def basketball(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     users = load_users()
@@ -280,14 +248,15 @@ async def basketball(update: Update, context: CallbackContext) -> None:
     result = random.choice(["score", "miss"])
     if result == "score":
         users[user_id]["credits"] += 75
-        message = "🏀 Score! You earned 75 credits."
+        message = "🏀 Score! You earned 75 credits! 🏆"
     else:
         users[user_id]["credits"] -= 75
-        message = "🏀 Miss! You lost 75 credits."
+        message = "🏀 Miss! You lost 75 credits. 😕"
 
     save_users(users)  # Save user data
     await update.message.reply_text(message)
 
+# Football game function
 async def football(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     users = load_users()
@@ -299,13 +268,36 @@ async def football(update: Update, context: CallbackContext) -> None:
     result = random.choice(["goal", "miss"])
     if result == "goal":
         users[user_id]["credits"] += 50
-        message = "⚽ Goal! You earned 50 credits."
+        message = "⚽ Goal! You earned 50 credits! 🎉"
     else:
         users[user_id]["credits"] -= 50
-        message = "🚫 Miss! You lost 50 credits."
+        message = "🚫 Miss! You lost 50 credits. 😔"
 
     save_users(users)  # Save user data
     await update.message.reply_text(message)
+
+# Slot Machine game function
+async def slot_machine(update: Update, context: CallbackContext) -> None:
+    user_id = str(update.effective_user.id)
+    users = load_users()
+
+    if user_id not in users:
+        await update.message.reply_text("You need to start the bot first by using /start.")
+        return
+
+    slot_emojis = ["🍒", "🍋", "🍇", "🍉", "🔔", "💎"]
+    slot_result = [random.choice(slot_emojis) for _ in range(3)]
+
+    if len(set(slot_result)) == 1:  # All three are the same
+        users[user_id]["credits"] += 500
+        message = f"🎰 {slot_result[0]} {slot_result[1]} {slot_result[2]} - Jackpot! You won 500 credits! 💰"
+    else:
+        users[user_id]["credits"] -= 100
+        message = f"🎰 {slot_result[0]} {slot_result[1]} {slot_result[2]} - No luck this time. You lost 100 credits. 😞"
+
+    save_users(users)  # Save user data
+    await update.message.reply_text(message)
+
     
 async def add_units(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
