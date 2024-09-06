@@ -204,56 +204,81 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
+    logger.info(f"User {user_id} initiated /pull command")
+    
+    # Fetch user data
     user_data = get_genshin_user_by_id(user_id)
-
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
+        logger.warning(f"User {user_id} tried /pull without starting the bot.")
         return
 
+    # Validate number of pulls
     try:
         number_of_pulls = int(context.args[0])
     except (IndexError, ValueError):
         await update.message.reply_text("❗ Usage: /pull <number_of_pulls>")
+        logger.warning(f"User {user_id} provided invalid number of pulls.")
         return
 
     if number_of_pulls <= 0:
         await update.message.reply_text("❗ The number of pulls must be greater than zero.")
+        logger.warning(f"User {user_id} attempted /pull with non-positive number of pulls.")
         return
 
     total_cost = COST_PER_PULL * number_of_pulls
-
     if total_cost > user_data["credits"]:
         await update.message.reply_text("🔺 Insufficient primogems.")
+        logger.warning(f"User {user_id} attempted /pull with insufficient primogems.")
         return
 
+    # Deduct the cost
     user_data["credits"] -= total_cost
+    logger.info(f"User {user_id} was charged {total_cost} primogems for {number_of_pulls} pulls.")
 
-    all_items = {**CHARACTERS, **WEAPONS}
-    results = [draw_item(all_items) for _ in range(number_of_pulls)]
-    
+    # Perform the pulls
+    try:
+        all_items = {**CHARACTERS, **WEAPONS}
+        results = [draw_item(all_items) for _ in range(number_of_pulls)]
+    except Exception as e:
+        logger.error(f"Error during item drawing for user {user_id}: {e}")
+        await update.message.reply_text("❗ An error occurred while processing your pull. Please try again later.")
+        return
+
     result_message = "🎉 **You pulled the following items:**\n\n"
     
     # Limit message size by sending results in batches of 50 items
     batch_size = 50
     batches = [results[i:i + batch_size] for i in range(0, len(results), batch_size)]
 
-    for batch in batches:
+    for i, batch in enumerate(batches):
         batch_message = ""
-        for item in batch:
-            item_type = "characters" if item in CHARACTERS else "weapons"
-            update_item(user_data, item, item_type)
-            batch_message += f"🔹 {item} - {CHARACTERS.get(item, WEAPONS.get(item))}⭐\n"
-        
-        await update.message.reply_text(batch_message, parse_mode="Markdown")
-    
+        try:
+            for item in batch:
+                item_type = "characters" if item in CHARACTERS else "weapons"
+                update_item(user_data, item, item_type)
+                batch_message += f"🔹 {item} - {CHARACTERS.get(item, WEAPONS.get(item))}⭐\n"
+            
+            await update.message.reply_text(batch_message, parse_mode="Markdown")
+            logger.info(f"Batch {i+1}/{len(batches)} of results sent to user {user_id}.")
+        except Exception as e:
+            logger.error(f"Error during result processing for user {user_id}: {e}")
+            await update.message.reply_text(f"❗ An error occurred while processing your results. Batch {i+1} failed.")
+
     # Final message showing cost
-    final_message = f"\n💎 You spent {total_cost} Primogems!\n"
-    await update.message.reply_text(final_message, parse_mode="Markdown")
-    
-    save_genshin_user(user_data)
-    logger.info(f"User {user_id} pulled {number_of_pulls} items")
+    try:
+        final_message = f"\n💎 You spent {total_cost} Primogems!\n"
+        await update.message.reply_text(final_message, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Error sending final message to user {user_id}: {e}")
 
-
+    # Save updated user data
+    try:
+        save_genshin_user(user_data)
+        logger.info(f"User {user_id}'s data was successfully updated and saved.")
+    except Exception as e:
+        logger.error(f"Error saving user data for {user_id}: {e}")
+        
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
