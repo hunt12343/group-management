@@ -194,7 +194,33 @@ async def pull(update: Update, context: CallbackContext) -> None:
         update_item(user_data, item, item_type)
         result_message += f"🔹 {item} - {CHARACTERS.get(item, WEAPONS.get(item))}⭐\n"
 
-    # Save updated user data
-    save_genshin_user(user_data)
+    result_message += f"\n💎 You spent {total_cost} Primogems!\n"
     
-    await update.message.reply_text(result_message)
+    save_genshin_user(user_data)
+    await update.message.reply_text(result_message, parse_mode="Markdown")
+    logger.info(f"User {user_id} pulled {number_of_pulls} items")
+
+async def bag(update: Update, context: CallbackContext) -> None:
+    user_id = str(update.effective_user.id)
+    user_data = get_genshin_user_by_id(user_id)
+
+    if not user_data:
+        await update.message.reply_text("🔹 You need to start the bot first by using /start.")
+        return
+
+    if "bag" not in user_data or not user_data["bag"]:
+        await update.message.reply_text("🎒 Your bag is empty.")
+        return
+
+    bag_message = "🎒 **Your Bag**:\n"
+    for item_type, items in user_data["bag"].items():
+        bag_message += f"\n🗃️ **{item_type.capitalize()}**:\n"
+        for item, count in items.items():
+            # Add proper display for refinement/constellation
+            if item_type == "characters":
+                bag_message += f"🔹 {item}: {count}\n"
+            elif item_type == "weapons":
+                bag_message += f"🔹 {item}: {count}\n"
+
+    await update.message.reply_text(bag_message, parse_mode="Markdown")
+    logger.info(f"User {user_id} viewed their bag")
