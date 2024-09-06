@@ -45,17 +45,18 @@ def escape_markdown_v2(text):
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
     return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
 
+# Start command
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
-    user_id = str(user.id)  # Always ensure the user ID is treated as a string
+    user_id = str(user.id)
 
-    existing_user = get_user_by_id(user_id)  # Fetch the user data from MongoDB
+    existing_user = get_user_by_id(user_id)
 
-    if existing_user is None:  # Check if the user doesn't exist
+    if existing_user is None:
         new_user = {
             "user_id": user_id,
             "join_date": datetime.now().strftime('%m/%d/%y'),
-            "credits": 5000,  # Starting credits
+            "credits": 5000,
             "daily": None,
             "win": 0,
             "loss": 0,
@@ -66,7 +67,7 @@ async def start(update: Update, context: CallbackContext) -> None:
             "primos": 0,
             "bag": {}
         }
-        save_user(new_user)  # Save the new user to the database
+        save_user(new_user)
         logger.info(f"User {user_id} started the bot.")
 
         await update.message.reply_text(
@@ -78,8 +79,7 @@ async def start(update: Update, context: CallbackContext) -> None:
             "You have already started the bot. Use /profile to view your details."
         )
 
-
-# Profile function
+# Profile command
 async def profile(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
@@ -99,8 +99,11 @@ async def profile(update: Update, context: CallbackContext) -> None:
 
         try:
             photos = await context.bot.get_user_profile_photos(user_id)
-            photo = photos.photos[0][0].file_id
-            await update.message.reply_photo(photo=photo, caption=profile_message)
+            if photos.photos:
+                photo = photos.photos[0][0].file_id
+                await update.message.reply_photo(photo=photo, caption=profile_message)
+            else:
+                await update.message.reply_text(profile_message)
         except Exception as e:
             logger.error(f"Error fetching user photo: {e}")
             await update.message.reply_text(profile_message)
@@ -138,11 +141,13 @@ async def roulette(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(message)
 
-# Flip game
+# Flip coin game
 async def flip(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
+    user = update.effective_user
+    user_id = str(user.id)
 
     user_data = get_user_by_id(user_id)
+
     if not user_data:
         await update.message.reply_text("You need to start the bot first by using /start.")
         return
@@ -171,6 +176,7 @@ async def flip(update: Update, context: CallbackContext) -> None:
         message = f"😞 You lost! {bet_amount} credits deducted."
 
     await update.message.reply_text(message)
+    
 async def bet(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
