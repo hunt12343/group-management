@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
+from telegram.ext import MessageHandler, Filters
 from token_1 import token
 
 from genshin_game import pull, bag, reward_primos
