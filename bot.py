@@ -77,7 +77,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     if existing_genshin_user is None:
         new_genshin_user = {
             "user_id": user_id,
-            "credits": 50000,  # Adjust initial primogems as needed
+            "primos": 3200,  # Adjust initial primogems as needed
             "bag": {}
         }
         save_genshin_user(new_genshin_user)
