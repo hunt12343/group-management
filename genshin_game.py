@@ -232,15 +232,25 @@ async def pull(update: Update, context: CallbackContext) -> None:
     results = [draw_item(all_items) for _ in range(number_of_pulls)]
     
     result_message = "🎉 **You pulled the following items:**\n\n"
-    for item in results:
-        item_type = "characters" if item in CHARACTERS else "weapons"
-        update_item(user_data, item, item_type)
-        result_message += f"🔹 {item} - {CHARACTERS.get(item, WEAPONS.get(item))}⭐\n"
+    
+    # Limit message size by sending results in batches of 50 items
+    batch_size = 50
+    batches = [results[i:i + batch_size] for i in range(0, len(results), batch_size)]
 
-    result_message += f"\n💎 You spent {total_cost} Primogems!\n"
+    for batch in batches:
+        batch_message = ""
+        for item in batch:
+            item_type = "characters" if item in CHARACTERS else "weapons"
+            update_item(user_data, item, item_type)
+            batch_message += f"🔹 {item} - {CHARACTERS.get(item, WEAPONS.get(item))}⭐\n"
+        
+        await update.message.reply_text(batch_message, parse_mode="Markdown")
+    
+    # Final message showing cost
+    final_message = f"\n💎 You spent {total_cost} Primogems!\n"
+    await update.message.reply_text(final_message, parse_mode="Markdown")
     
     save_genshin_user(user_data)
-    await update.message.reply_text(result_message, parse_mode="Markdown")
     logger.info(f"User {user_id} pulled {number_of_pulls} items")
 
 
