@@ -192,8 +192,12 @@ async def bet(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Please use the format: /bet <amount>")
         return
 
-    if bet_amount <= 0 or bet_amount > users[user_id]["credits"]:
-        await update.message.reply_text("Invalid bet amount or insufficient credits.")
+    # Validate bet amount and user credits
+    if bet_amount <= 0:
+        await update.message.reply_text("Bet amount must be greater than 0.")
+        return
+    if bet_amount > users[user_id]["credits"]:
+        await update.message.reply_text("Insufficient credits for this bet.")
         return
 
     result = secrets.choice(["win", "lose"])
@@ -208,6 +212,7 @@ async def bet(update: Update, context: CallbackContext) -> None:
 
     save_users(users)
     await update.message.reply_text(message)
+
 
 async def dart(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
