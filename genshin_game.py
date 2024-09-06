@@ -24,24 +24,35 @@ WEAPONS = {
     "The Bell": 4, "Katsuragikiri Nagamasa": 4, "The Viridescent Hunt": 4
 }
 
+async def reward_primos(update: Update, context: CallbackContext):
+    user_id = str(update.effective_user.id)
+    user_data = get_user_by_id(user_id)
+    
+    if not user_data:
+        user_data = {
+            "user_id": user_id,
+            "credits": 50000,
+            "bag": {}
+        }
+
+    user_data["credits"] += 5
+    save_user(user_data)
+
 # Function to get user data
 def get_user_by_id(user_id):
-    # Implement this to fetch user data from your database
+    # Fetch user data from your database (add MongoDB query here)
     pass
 
 # Function to save user data
 def save_user(user_data):
-    # Implement this to save user data to your database
+    # Save user data to your database (add MongoDB save logic here)
     pass
 
 def draw_item(items):
-    # Draw an item based on their star ratings
     weights = [1/(item_star**2) for item_star in items.values()]
-    item = random.choices(list(items.keys()), weights=weights, k=1)[0]
-    return item
+    return random.choices(list(items.keys()), weights=weights, k=1)[0]
 
 def update_item(user_data, item, item_type):
-    # Update item refinement
     if item_type not in user_data["bag"]:
         user_data["bag"][item_type] = {}
     
@@ -50,7 +61,7 @@ def update_item(user_data, item, item_type):
     else:
         user_data["bag"][item_type][item] += 1
 
-    # Show refinement level or constellation
+    # Update refinement/constellation level
     if user_data["bag"][item_type][item] > 1:
         if item_type == "characters":
             user_data["bag"][item_type][item] = f"✨ C{user_data['bag'][item_type][item]}"
@@ -71,16 +82,9 @@ async def pull(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("❗ Usage: /pull <number>")
         return
 
-    if number_of_pulls <= 0:
-        await update.message.reply_text("❗ Number of pulls must be greater than 0.")
-        return
-
     total_cost = COST_PER_PULL * number_of_pulls
-
     if number_of_pulls == 10:
         total_cost = COST_PER_10_PULLS
-    elif number_of_pulls % 10 == 0:
-        total_cost = (number_of_pulls // 10) * COST_PER_10_PULLS
 
     if total_cost > user_data["credits"]:
         await update.message.reply_text("🔺 Insufficient primogems.")
@@ -88,11 +92,9 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     user_data["credits"] -= total_cost
 
-    # Pull items
     all_items = {**CHARACTERS, **WEAPONS}
     results = [draw_item(all_items) for _ in range(number_of_pulls)]
     
-    # Create a result message
     result_message = "🎉 **You pulled the following items:**\n\n"
     for item in results:
         item_type = "characters" if item in CHARACTERS else "weapons"
@@ -117,7 +119,6 @@ async def bag(update: Update, context: CallbackContext) -> None:
         return
 
     bag_message = "🎒 **Your Bag**:\n"
-
     for item_type, items in user_data["bag"].items():
         bag_message += f"\n🗃️ **{item_type.capitalize()}**:\n"
         for item, count in items.items():
