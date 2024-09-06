@@ -3,6 +3,7 @@ from telegram.ext import CallbackContext
 import random
 from pymongo import MongoClient
 import logging
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 # MongoDB connection
 client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
 db = client['telegram_bot']
+user_collection = db["users"]
 genshin_collection = db["genshin_users"]
 
 # Define the primogem cost
@@ -35,9 +37,71 @@ WEAPONS = {
     "The Bell": 4, "Katsuragikiri Nagamasa": 4, "The Viridescent Hunt": 4
 }
 
+# Function to get user data from the genshin_users collection
+def get_genshin_user_by_id(user_id):
+    return genshin_collection.find_one({"user_id": user_id})
+
+# Function to save user data to the genshin_users collection
+def save_genshin_user(user_data):
+    genshin_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
+
+# Function to get user data from the general users collection
+def get_user_by_id(user_id):
+    return user_collection.find_one({"user_id": user_id})
+
+# Function to save user data to the general users collection
+def save_user(user_data):
+    user_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
+
+async def start(update: Update, context: CallbackContext) -> None:
+    user = update.effective_user
+    user_id = str(user.id)
+
+    # Save in general users collection
+    existing_user = get_user_by_id(user_id)
+
+    if existing_user is None:
+        new_user = {
+            "user_id": user_id,
+            "join_date": datetime.now().strftime('%m/%d/%y'),
+            "credits": 5000,
+            "daily": None,
+            "win": 0,
+            "loss": 0,
+            "achievement": [],
+            "faction": "None",
+            "ban": None,
+            "title": "None",
+            "primos": 0,
+            "bag": {}
+        }
+        save_user(new_user)
+        logger.info(f"User {user_id} started the bot.")
+
+        await update.message.reply_text(
+            "Welcome! You've received 5000 credits to start betting. Use /profile to check your details."
+        )
+    else:
+        logger.info(f"User {user_id} already exists.")
+        await update.message.reply_text(
+            "You have already started the bot. Use /profile to view your details."
+        )
+
+    # Save in genshin_users collection
+    existing_genshin_user = get_genshin_user_by_id(user_id)
+
+    if existing_genshin_user is None:
+        new_genshin_user = {
+            "user_id": user_id,
+            "credits": 50000,  # Adjust initial primogems as needed
+            "bag": {}
+        }
+        save_genshin_user(new_genshin_user)
+        logger.info(f"Genshin user {user_id} initialized.")
+
 async def reward_primos(update: Update, context: CallbackContext):
     user_id = str(update.effective_user.id)
-    user_data = get_user_by_id(user_id)
+    user_data = get_genshin_user_by_id(user_id)
     
     if not user_data:
         user_data = {
@@ -48,22 +112,8 @@ async def reward_primos(update: Update, context: CallbackContext):
         logger.info(f"New user initialized: {user_id}")
 
     user_data["credits"] += 5
-    save_user(user_data)
+    save_genshin_user(user_data)
     logger.info(f"User {user_id} rewarded 5 primogems")
-
-# Function to get user data
-def get_user_by_id(user_id):
-    user_data = genshin_collection.find_one({"user_id": user_id})
-    if user_data:
-        logger.info(f"User {user_id} found in database")
-    else:
-        logger.info(f"User {user_id} not found in database")
-    return user_data
-
-# Function to save user data
-def save_user(user_data):
-    genshin_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
-    logger.info(f"User {user_data['user_id']} data saved/updated")
 
 def draw_item(items):
     weights = [1/(item_star**2) for item_star in items.values()]
@@ -87,7 +137,7 @@ def update_item(user_data, item, item_type):
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
-    user_data = get_user_by_id(user_id)
+    user_data = get_genshin_user_by_id(user_id)
 
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
@@ -120,13 +170,13 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     result_message += f"\n💎 You spent {total_cost} Primogems!\n"
     
-    save_user(user_data)
+    save_genshin_user(user_data)
     await update.message.reply_text(result_message, parse_mode="Markdown")
     logger.info(f"User {user_id} pulled {number_of_pulls} items")
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
-    user_data = get_user_by_id(user_id)
+    user_data = get_genshin_user_by_id(user_id)
 
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
