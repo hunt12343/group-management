@@ -92,11 +92,11 @@ async def profile(update: Update, context: CallbackContext) -> None:
         profile_message = (
             f"👤 *{user.first_name}* 【{user_data['faction']}】\n"
             f"🆔 *ID*: {user_data['user_id']}\n"
-            f"💰 *Units*: {user_data['credits']} 💎\n"
-            f"🎯 *Primos*: {user_data['primos']} ⭐\n\n"
-            f"🏆 *Wins*: {user_data['win']}\n"
-            f"💔 *Losses*: {user_data['loss']}\n\n"
-            f"🎖️ *Title*: {user_data['title']}\n"
+            f"💰 *Credits*: {user_data['credits']} 💎\n"
+            f"🎯 *Primos*: {user_data.get('primos', 0)} ⭐\n\n"
+            f"🏆 *Wins*: {user_data.get('win', 0)}\n"
+            f"💔 *Losses*: {user_data.get('loss', 0)}\n\n"
+            f"🎖️ *Title*: {user_data.get('title', 'None')}\n"
         )
 
         try:
@@ -110,7 +110,7 @@ async def profile(update: Update, context: CallbackContext) -> None:
             logger.error(f"Error fetching user photo: {e}")
             await update.message.reply_text(profile_message)
     else:
-        await update.message.reply_text("You need to start the bot first by using /start.")
+        await update.message.reply_text("🔹 You need to start the bot first by using /start.")
 
 async def roulette(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
@@ -284,7 +284,13 @@ def main() -> None:
     application.add_handler(CommandHandler("pull", pull))
     application.add_handler(CommandHandler("bag", bag))
 
-    # Start the bot
+    application.add_handler(MessageHandler(Filters.text & ~Filters.command, reward_primos))
+
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
+
     application.run_polling()
 
 if __name__ == '__main__':
