@@ -5,6 +5,7 @@ from pymongo import MongoClient
 import logging
 from datetime import datetime
 
+OWNER_ID = 5667016949
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -104,52 +105,53 @@ async def reward_primos(update: Update, context: CallbackContext) -> None:
     user_data = get_genshin_user_by_id(user_id)
     
     if not user_data:
+        # Create user data if not present
         user_data = {
             "user_id": user_id,
-            "credits": 0,  # Starting credits if user doesn't exist
+            "credits": 50000,  # Initial primogems
             "bag": {}
         }
-        logger.info(f"New Genshin user initialized: {user_id}")
+        save_genshin_user(user_data)
 
+    # Increment primos by 5
     user_data["credits"] += 5
     save_genshin_user(user_data)
-    logger.info(f"User {user_id} automatically rewarded 5 primogems")
 
 
 async def add_primos(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != OWNER_ID:
-        await update.message.reply_text("You don't have permission to use this command.")
+        await update.message.reply_text("🔒 You don't have permission to use this command.")
         return
 
     try:
         user_id = context.args[0]
         amount = int(context.args[1])
     except (IndexError, ValueError):
-        await update.message.reply_text("Please use the format: /add primo <user_id> <amount>")
+        await update.message.reply_text("❗ Usage: /add primo <user_id> <amount>")
         return
 
     if amount <= 0:
-        await update.message.reply_text("Invalid amount. Please enter a positive number.")
+        await update.message.reply_text("❗ The amount must be a positive number.")
         return
 
     user_data = get_genshin_user_by_id(user_id)
 
     if not user_data:
-        await update.message.reply_text(f"User with ID {user_id} does not exist.")
+        await update.message.reply_text(f"❗ User with ID {user_id} does not exist.")
         return
 
     user_data["credits"] += amount
     save_genshin_user(user_data)
-    await update.message.reply_text(f"{amount} primogems have been added to user {user_id}'s account.")
+    await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 
 def draw_item(items):
-    weights = [1/(item_star**2) for item_star in items.values()]
+    weights = [1 / (item_star**2) for item_star in items.values()]
     return random.choices(list(items.keys()), weights=weights, k=1)[0]
 
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
         user_data["bag"][item_type] = {}
-    
+
     if item not in user_data["bag"][item_type]:
         user_data["bag"][item_type][item] = 1
     else:
@@ -160,7 +162,7 @@ def update_item(user_data, item, item_type):
         if item_type == "characters":
             user_data["bag"][item_type][item] = f"✨ C{user_data['bag'][item_type][item]}"
         elif item_type == "weapons":
-            user_data["bag"][item_type][item] = f"⚔️ R{user_data['bag'][item_type][item]}"
+            user_data["bag"][item_type][item] = f"⚔️ R{user_data['bag'][item_type][item]}""
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
@@ -209,19 +211,20 @@ async def bag(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
 
-    if "bag" not in user_data or not user_data["bag"]:
-        await update.message.reply_text("🎒 Your bag is empty.")
-        return
-
     bag_message = "🎒 **Your Bag**:\n"
-    for item_type, items in user_data["bag"].items():
-        bag_message += f"\n🗃️ **{item_type.capitalize()}**:\n"
-        for item, count in items.items():
-            # Add proper display for refinement/constellation
-            if item_type == "characters":
+
+    # Show primos separately
+    bag_message += f"💎 **Primos**: {user_data['credits']} ⭐\n\n"
+
+    # Show other items in the bag
+    if 'bag' in user_data and user_data['bag']:
+        for item_type, items in user_data['bag'].items():
+            bag_message += f"\n🗃️ **{item_type.capitalize()}**:\n"
+            for item, count in items.items():
                 bag_message += f"🔹 {item}: {count}\n"
-            elif item_type == "weapons":
-                bag_message += f"🔹 {item}: {count}\n"
+    else:
+        bag_message += "🎒 Your bag is empty."
 
     await update.message.reply_text(bag_message, parse_mode="Markdown")
     logger.info(f"User {user_id} viewed their bag")
+
