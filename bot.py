@@ -284,6 +284,8 @@ def main() -> None:
     application.add_handler(CommandHandler("dart", dart))
     application.add_handler(CommandHandler("basketball", basketball))
     application.add_handler(CommandHandler("add", add))
+    application.add_handler(CommandHandler("pull", pull))
+    application.add_handler(CommandHandler("bag", bag))
 
     # Start the bot
     application.run_polling()
