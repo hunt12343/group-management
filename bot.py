@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
-from telegram.ext import MessageHandler, Filters
+from telegram.ext import MessageHandler, filters
 from token_1 import token
 
 from genshin_game import pull, bag, reward_primos
@@ -271,6 +271,8 @@ async def add(update: Update, context: CallbackContext) -> None:
     update_user_credits(user_id, amount)
     await update.message.reply_text(f"{amount} credits have been added to user {user_id}'s profile.")
 
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
+
 def main() -> None:
     application = Application.builder().token(token).build()
 
@@ -284,8 +286,7 @@ def main() -> None:
     application.add_handler(CommandHandler("add", add))
     application.add_handler(CommandHandler("pull", pull))
     application.add_handler(CommandHandler("bag", bag))
-
-    application.add_handler(MessageHandler(Filters.text & ~Filters.command, reward_primos))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reward_primos))
 
     application.run_polling()
 
