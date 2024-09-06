@@ -3,13 +3,11 @@ import asyncio
 import os
 import logging
 from datetime import datetime
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext
 from token_1 import token
-import random
-import secrets
 
-from genshin_game import pull, bag
+from genshin_game import pull, bag, reward_primos
 
 # Global variables
 OWNER_ID = 5667016949
@@ -23,6 +21,7 @@ logger = logging.getLogger(__name__)
 client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
 db = client['telegram_bot']
 users_collection = db['users']
+genshin_collection = db['genshin_users']
 
 # MongoDB management functions
 def get_user_by_id(user_id):
@@ -31,19 +30,11 @@ def get_user_by_id(user_id):
 def save_user(user_data):
     users_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
 
-def update_user_credits(user_id, amount):
-    users_collection.update_one({"user_id": user_id}, {"$inc": {"credits": amount}})
+def get_genshin_user_by_id(user_id):
+    return genshin_collection.find_one({"user_id": user_id})
 
-def update_user_win_loss(user_id, win=True):
-    if win:
-        users_collection.update_one({"user_id": user_id}, {"$inc": {"win": 1}})
-    else:
-        users_collection.update_one({"user_id": user_id}, {"$inc": {"loss": 1}})
-
-# Telegram message formatting function
-def escape_markdown_v2(text):
-    escape_chars = r'\_*[]()~`>#+-=|{}.!'
-    return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
+def save_genshin_user(user_data):
+    genshin_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
 
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
@@ -85,13 +76,12 @@ async def start(update: Update, context: CallbackContext) -> None:
     if existing_genshin_user is None:
         new_genshin_user = {
             "user_id": user_id,
-            "credits": 3200,
+            "credits": 50000,  # Adjust initial primogems as needed
             "bag": {}
         }
         save_genshin_user(new_genshin_user)
         logger.info(f"Genshin user {user_id} initialized.")
 
-# Profile command
 async def profile(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
@@ -122,7 +112,6 @@ async def profile(update: Update, context: CallbackContext) -> None:
     else:
         await update.message.reply_text("You need to start the bot first by using /start.")
 
-# Roulette game
 async def roulette(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
@@ -153,7 +142,6 @@ async def roulette(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(message)
 
-# Flip coin game
 async def flip(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
@@ -188,7 +176,7 @@ async def flip(update: Update, context: CallbackContext) -> None:
         message = f"😞 You lost! {bet_amount} credits deducted."
 
     await update.message.reply_text(message)
-    
+
 async def bet(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
@@ -238,7 +226,6 @@ async def dart(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("🎯")  # Send emoji first
         await update.message.reply_text("Miss! You lost 100 credits. 😢")  # Send text message
 
-# Basketball game function
 async def basketball(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
 
@@ -258,7 +245,6 @@ async def basketball(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("🏀")  # Send emoji first
         await update.message.reply_text("Miss! You lost 75 credits. 😞")  # Send text message
 
-# Add credits manually
 async def add(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != OWNER_ID:
         await update.message.reply_text("You don't have permission to use this command.")
@@ -284,7 +270,6 @@ async def add(update: Update, context: CallbackContext) -> None:
     update_user_credits(user_id, amount)
     await update.message.reply_text(f"{amount} credits have been added to user {user_id}'s profile.")
 
-# Main function to run the bot
 def main() -> None:
     application = Application.builder().token(token).build()
 
