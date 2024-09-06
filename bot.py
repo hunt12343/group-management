@@ -45,11 +45,11 @@ def escape_markdown_v2(text):
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
     return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
 
-# Start command
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
 
+    # Save in general users collection
     existing_user = get_user_by_id(user_id)
 
     if existing_user is None:
@@ -78,6 +78,18 @@ async def start(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(
             "You have already started the bot. Use /profile to view your details."
         )
+
+    # Save in genshin_users collection
+    existing_genshin_user = get_genshin_user_by_id(user_id)
+
+    if existing_genshin_user is None:
+        new_genshin_user = {
+            "user_id": user_id,
+            "credits": 3200,
+            "bag": {}
+        }
+        save_genshin_user(new_genshin_user)
+        logger.info(f"Genshin user {user_id} initialized.")
 
 # Profile command
 async def profile(update: Update, context: CallbackContext) -> None:
