@@ -2,7 +2,13 @@ from telegram import Update
 from telegram.ext import CallbackContext
 import random
 from pymongo import MongoClient
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# MongoDB connection
 client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
 db = client['telegram_bot']
 genshin_collection = db["genshin_users"]
@@ -39,17 +45,25 @@ async def reward_primos(update: Update, context: CallbackContext):
             "credits": 50000,
             "bag": {}
         }
+        logger.info(f"New user initialized: {user_id}")
 
     user_data["credits"] += 5
     save_user(user_data)
+    logger.info(f"User {user_id} rewarded 5 primogems")
 
 # Function to get user data
 def get_user_by_id(user_id):
-    return genshin_collection.find_one({"user_id": user_id})
+    user_data = genshin_collection.find_one({"user_id": user_id})
+    if user_data:
+        logger.info(f"User {user_id} found in database")
+    else:
+        logger.info(f"User {user_id} not found in database")
+    return user_data
 
 # Function to save user data
 def save_user(user_data):
     genshin_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
+    logger.info(f"User {user_data['user_id']} data saved/updated")
 
 def draw_item(items):
     weights = [1/(item_star**2) for item_star in items.values()]
@@ -108,6 +122,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
     
     save_user(user_data)
     await update.message.reply_text(result_message, parse_mode="Markdown")
+    logger.info(f"User {user_id} pulled {number_of_pulls} items")
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
@@ -128,3 +143,4 @@ async def bag(update: Update, context: CallbackContext) -> None:
             bag_message += f"🔹 {item}: {count}\n"
 
     await update.message.reply_text(bag_message, parse_mode="Markdown")
+    logger.info(f"User {user_id} viewed their bag")
