@@ -99,21 +99,22 @@ async def start(update: Update, context: CallbackContext) -> None:
         save_genshin_user(new_genshin_user)
         logger.info(f"Genshin user {user_id} initialized.")
 
-async def reward_primos(update: Update, context: CallbackContext):
+async def reward_primos(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
     
     if not user_data:
         user_data = {
             "user_id": user_id,
-            "credits": 50000,
+            "credits": 0,  # Starting credits if user doesn't exist
             "bag": {}
         }
-        logger.info(f"New user initialized: {user_id}")
+        logger.info(f"New Genshin user initialized: {user_id}")
 
     user_data["credits"] += 5
     save_genshin_user(user_data)
-    logger.info(f"User {user_id} rewarded 5 primogems")
+    logger.info(f"User {user_id} automatically rewarded 5 primogems")
+
 
 async def add_primos(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != OWNER_ID:
