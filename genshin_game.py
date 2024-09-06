@@ -162,7 +162,7 @@ def update_item(user_data, item, item_type):
         if item_type == "characters":
             user_data["bag"][item_type][item] = f"✨ C{user_data['bag'][item_type][item]}"
         elif item_type == "weapons":
-            user_data["bag"][item_type][item] = f"⚔️ R{user_data['bag'][item_type][item]}""
+            user_data["bag"][item_type][item] = f"⚔️ R{user_data['bag'][item_type][item]}"
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
