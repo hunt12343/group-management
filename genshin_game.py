@@ -50,28 +50,29 @@ def update_item(user_data, item, item_type):
     else:
         user_data["bag"][item_type][item] += 1
 
+    # Show refinement level or constellation
     if user_data["bag"][item_type][item] > 1:
         if item_type == "characters":
-            user_data["bag"][item_type][item] = f"C{user_data['bag'][item_type][item]}"
+            user_data["bag"][item_type][item] = f"✨ C{user_data['bag'][item_type][item]}"
         elif item_type == "weapons":
-            user_data["bag"][item_type][item] = f"R{user_data['bag'][item_type][item]}"
+            user_data["bag"][item_type][item] = f"⚔️ R{user_data['bag'][item_type][item]}"
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_user_by_id(user_id)
 
     if not user_data:
-        await update.message.reply_text("You need to start the bot first by using /start.")
+        await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
 
     try:
         number_of_pulls = int(context.args[0])
     except (IndexError, ValueError):
-        await update.message.reply_text("Usage: /pull <number>")
+        await update.message.reply_text("❗ Usage: /pull <number>")
         return
 
     if number_of_pulls <= 0:
-        await update.message.reply_text("Number of pulls must be greater than 0.")
+        await update.message.reply_text("❗ Number of pulls must be greater than 0.")
         return
 
     total_cost = COST_PER_PULL * number_of_pulls
@@ -82,7 +83,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
         total_cost = (number_of_pulls // 10) * COST_PER_10_PULLS
 
     if total_cost > user_data["credits"]:
-        await update.message.reply_text("Insufficient primogems.")
+        await update.message.reply_text("🔺 Insufficient primogems.")
         return
 
     user_data["credits"] -= total_cost
@@ -91,32 +92,35 @@ async def pull(update: Update, context: CallbackContext) -> None:
     all_items = {**CHARACTERS, **WEAPONS}
     results = [draw_item(all_items) for _ in range(number_of_pulls)]
     
+    # Create a result message
+    result_message = "🎉 **You pulled the following items:**\n\n"
     for item in results:
         item_type = "characters" if item in CHARACTERS else "weapons"
         update_item(user_data, item, item_type)
+        result_message += f"🔹 {item} - {CHARACTERS.get(item, WEAPONS.get(item))}⭐\n"
 
-    result_message = f"🎉 You pulled {number_of_pulls} items!\n" + "\n".join(results)
+    result_message += f"\n💎 You spent {total_cost} Primogems!\n"
     
     save_user(user_data)
-    await update.message.reply_text(result_message)
+    await update.message.reply_text(result_message, parse_mode="Markdown")
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_user_by_id(user_id)
 
     if not user_data:
-        await update.message.reply_text("You need to start the bot first by using /start.")
+        await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
 
     if "bag" not in user_data or not user_data["bag"]:
-        await update.message.reply_text("Your bag is empty.")
+        await update.message.reply_text("🎒 Your bag is empty.")
         return
 
-    bag_message = "🎒 Your Bag:\n"
+    bag_message = "🎒 **Your Bag**:\n"
 
     for item_type, items in user_data["bag"].items():
-        bag_message += f"\n{item_type.capitalize()}:\n"
+        bag_message += f"\n🗃️ **{item_type.capitalize()}**:\n"
         for item, count in items.items():
-            bag_message += f"{item}: {count}\n"
+            bag_message += f"🔹 {item}: {count}\n"
 
-    await update.message.reply_text(bag_message)
+    await update.message.reply_text(bag_message, parse_mode="Markdown")
