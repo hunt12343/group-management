@@ -180,9 +180,10 @@ async def flip(update: Update, context: CallbackContext) -> None:
 async def bet(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
-    users = load_users()
 
-    if user_id not in users:
+    user_data = get_user_by_id(user_id)
+
+    if not user_data:
         await update.message.reply_text("You need to start the bot first by using /start.")
         return
 
@@ -192,192 +193,99 @@ async def bet(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Please use the format: /bet <amount>")
         return
 
-    # Validate bet amount and user credits
-    if bet_amount <= 0:
-        await update.message.reply_text("Bet amount must be greater than 0.")
-        return
-    if bet_amount > users[user_id]["credits"]:
-        await update.message.reply_text("Insufficient credits for this bet.")
+    if bet_amount <= 0 or bet_amount > user_data["credits"]:
+        await update.message.reply_text("Invalid bet amount.")
         return
 
     result = secrets.choice(["win", "lose"])
     if result == "win":
-        users[user_id]["credits"] += bet_amount
-        users[user_id]["win"] += 1
+        update_user_credits(user_id, bet_amount)
         message = f"You won! {bet_amount} credits have been added to your profile."
     else:
-        users[user_id]["credits"] -= bet_amount
-        users[user_id]["loss"] += 1
+        update_user_credits(user_id, -bet_amount)
         message = f"You lost! {bet_amount} credits have been deducted from your profile."
 
-    save_users(users)
     await update.message.reply_text(message)
-
 
 async def dart(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
-    users = load_users()
 
-    if user_id not in users:
+    user_data = get_user_by_id(user_id)
+
+    if not user_data:
         await update.message.reply_text("You need to start the bot first by using /start.")
         return
 
     result = random.choice(["bullseye", "miss"])
     if result == "bullseye":
-        users[user_id]["credits"] += 100
+        update_user_credits(user_id, 100)
         await update.message.reply_text("🎯")  # Send emoji first
         await update.message.reply_text("Bullseye! You earned 100 credits! 😎")  # Send text message
     else:
-        users[user_id]["credits"] -= 100
+        update_user_credits(user_id, -100)
         await update.message.reply_text("🎯")  # Send emoji first
         await update.message.reply_text("Miss! You lost 100 credits. 😢")  # Send text message
-
-    save_users(users)  # Save user data
 
 # Basketball game function
 async def basketball(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
-    users = load_users()
 
-    if user_id not in users:
+    user_data = get_user_by_id(user_id)
+
+    if not user_data:
         await update.message.reply_text("You need to start the bot first by using /start.")
         return
 
     result = random.choice(["score", "miss"])
     if result == "score":
-        users[user_id]["credits"] += 75
+        update_user_credits(user_id, 75)
         await update.message.reply_text("🏀")  # Send emoji first
         await update.message.reply_text("Score! You earned 75 credits! 🏆")  # Send text message
     else:
-        users[user_id]["credits"] -= 75
+        update_user_credits(user_id, -75)
         await update.message.reply_text("🏀")  # Send emoji first
-        await update.message.reply_text("Miss! You lost 75 credits. 😕")  # Send text message
+        await update.message.reply_text("Miss! You lost 75 credits. 😞")  # Send text message
 
-    save_users(users)  # Save user data
-
-# Football game function
-async def football(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-    users = load_users()
-
-    if user_id not in users:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    result = random.choice(["goal", "miss"])
-    if result == "goal":
-        users[user_id]["credits"] += 50
-        await update.message.reply_text("⚽")  # Send emoji first
-        await update.message.reply_text("Goal! You earned 50 credits! 🎉")  # Send text message
-    else:
-        users[user_id]["credits"] -= 50
-        await update.message.reply_text("⚽")  # Send emoji first
-        await update.message.reply_text("Miss! You lost 50 credits. 😔")  # Send text message
-
-    save_users(users)  # Save user data
-
-# Slot Machine game function
-async def slot_machine(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-    users = load_users()
-
-    if user_id not in users:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    slot_emojis = ["🍒", "🍋", "🍇", "🍉", "🔔", "💎"]
-    slot_result = [random.choice(slot_emojis) for _ in range(3)]
-
-    # Send slot result emojis first
-    await update.message.reply_text(f"{slot_result[0]} {slot_result[1]} {slot_result[2]}")
-
-    if len(set(slot_result)) == 1:  # All three are the same
-        users[user_id]["credits"] += 500
-        await update.message.reply_text("Jackpot! You won 500 credits! 💰")  # Send text message
-    else:
-        users[user_id]["credits"] -= 100
-        await update.message.reply_text("No luck this time. You lost 100 credits. 😞")  # Send text message
-
-    save_users(users)  # Save user data
-
-async def add_units(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        await update.message.reply_text("You are not authorized to use this command.")
+# Add credits manually
+async def add(update: Update, context: CallbackContext) -> None:
+    if update.effective_user.id != OWNER_ID:
+        await update.message.reply_text("You don't have permission to use this command.")
         return
 
     try:
-        target_user_id = context.args[0]
+        user_id = context.args[0]
         amount = int(context.args[1])
     except (IndexError, ValueError):
-        await update.message.reply_text("Usage: /add <user_id> <amount>")
+        await update.message.reply_text("Please use the format: /add <user_id> <amount>")
         return
 
-    update_user_credits(target_user_id, amount)
-    await update.message.reply_text(f"Added {amount} credits to user {target_user_id}.")
-
-async def backup(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
-    if user_id != OWNER_ID:
-        await update.message.reply_text("You do not have permission to use this command.")
+    if amount <= 0:
+        await update.message.reply_text("Invalid amount. Please enter a positive number.")
         return
 
-    files_to_send = [USERS_FILE]  
-    for file_path in files_to_send:
-        try:
-            with open(file_path, 'rb') as file:
-                await context.bot.send_document(chat_id=OWNER_ID, document=file, filename=os.path.basename(file_path))
-        except FileNotFoundError:
-            await update.message.reply_text(f"File {file_path} not found.")
-        except Exception as e:
-            logger.error(f"Error sending file {file_path}: {e}")
-            await update.message.reply_text(f"Error sending file {file_path}: {str(e)}")
+    user_data = get_user_by_id(user_id)
 
-async def inline_start(update: Update, context: CallbackContext) -> None:
-    button = InlineKeyboardButton("Start Bot", url=f"https://t.me/{context.bot.username}?start=start")
-    reply_markup = InlineKeyboardMarkup([[button]])
-    await update.message.reply_text("Please start the bot by clicking the button below:", reply_markup=reply_markup)
-
-async def broadcast(update: Update, context: CallbackContext) -> None:
-    user_id = update.effective_user.id
-    if user_id not in load_sudo_ids():  # Assuming you have a function to load sudo IDs
-        await update.message.reply_text("You do not have permission to use this command.")
+    if not user_data:
+        await update.message.reply_text(f"User with ID {user_id} does not exist.")
         return
 
-    message = ' '.join(context.args)
-    if not message:
-        await update.message.reply_text("Please provide a message to broadcast.")
-        return
+    update_user_credits(user_id, amount)
+    await update.message.reply_text(f"{amount} credits have been added to user {user_id}'s profile.")
 
-    users = load_users()  # Load users to get their IDs
-    for uid in users.keys():
-        try:
-            await context.bot.send_message(chat_id=uid, text=message)
-        except Exception as e:
-            logger.error(f"Failed to send message to {uid}: {e}")
-
-# Main function
-def main():
+# Main function to run the bot
+def main() -> None:
     application = Application.builder().token(token).build()
 
-    # Command handlers
-    application.add_handler(CommandHandler('start', start))
-    application.add_handler(CommandHandler('profile', profile))
-    application.add_handler(CommandHandler('roulette', roulette))
-    application.add_handler(CommandHandler('slot', slot_machine))
-    application.add_handler(CommandHandler('flip', flip))
-    application.add_handler(CommandHandler('bet', bet))
-    application.add_handler(CommandHandler('dart', dart))
-    application.add_handler(CommandHandler('basketball', basketball))
-    application.add_handler(CommandHandler('football', football))
-    application.add_handler(CommandHandler('add', add_units))
-    application.add_handler(CommandHandler('backup', backup))
-    application.add_handler(CommandHandler('broadcast', broadcast))
-    application.add_handler(CommandHandler('pull', pull))
-    application.add_handler(CommandHandler('bag', bag))
-    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("profile", profile))
+    application.add_handler(CommandHandler("roulette", roulette))
+    application.add_handler(CommandHandler("flip", flip))
+    application.add_handler(CommandHandler("bet", bet))
+    application.add_handler(CommandHandler("dart", dart))
+    application.add_handler(CommandHandler("basketball", basketball))
+    application.add_handler(CommandHandler("add", add))
 
-    # Start polling
+    # Start the bot
     application.run_polling()
 
 if __name__ == '__main__':
