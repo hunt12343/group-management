@@ -1,17 +1,16 @@
+from pymongo import MongoClient
 import asyncio
-import json
 import os
 import logging
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackContext
-from token_1 import token 
+from token_1 import token
 import random
-import secrets  
+import secrets
 
 # Global variables
 OWNER_ID = 5667016949
-USERS_FILE = 'users.json'
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -19,38 +18,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# JSON management functions
-def load_json_data(filename, default):
-    if os.path.exists(filename):
-        with open(filename, 'r') as file:
-            return json.load(file)
-    return default
 
-def save_json_data(filename, data):
-    with open(filename, 'w') as file:
-        json.dump(data, file, indent=4)
+client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
+db = client['telegram_bot']
+users_collection = db['users']
 
-# User management functions
-def load_users():
-    return load_json_data(USERS_FILE, {})
+# MongoDB management functions
+def get_user_by_id(user_id):
+    return users_collection.find_one({"user_id": user_id})
 
-def save_users(users):
-    save_json_data(USERS_FILE, users)
+def save_user(user_data):
+    users_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
 
 def update_user_credits(user_id, amount):
-    users = load_users()
-    if str(user_id) in users:
-        users[str(user_id)]["credits"] += amount
-        save_users(users)
+    users_collection.update_one({"user_id": user_id}, {"$inc": {"credits": amount}})
 
 def update_user_win_loss(user_id, win=True):
-    users = load_users()
-    if str(user_id) in users:
-        if win:
-            users[str(user_id)]["win"] += 1
-        else:
-            users[str(user_id)]["loss"] += 1
-        save_users(users)
+    if win:
+        users_collection.update_one({"user_id": user_id}, {"$inc": {"win": 1}})
+    else:
+        users_collection.update_one({"user_id": user_id}, {"$inc": {"loss": 1}})
 
 # Telegram message formatting function
 def escape_markdown_v2(text):
@@ -62,10 +49,10 @@ async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
 
-    users = load_users()
+    existing_user = get_user_by_id(user_id)
 
-    if user_id not in users:
-        users[user_id] = {
+    if not existing_user:
+        new_user = {
             "user_id": user_id,
             "join_date": datetime.now().strftime('%m/%d/%y'),
             "credits": 5000,  # Starting credits
@@ -77,7 +64,7 @@ async def start(update: Update, context: CallbackContext) -> None:
             "ban": None,
             "title": "None"
         }
-        save_users(users)
+        save_user(new_user)
         logger.info(f"User {user_id} started the bot.")
 
         await update.message.reply_text(
@@ -92,10 +79,10 @@ async def start(update: Update, context: CallbackContext) -> None:
 async def profile(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
-    users = load_users()
 
-    if user_id in users:
-        user_data = users[user_id]
+    user_data = get_user_by_id(user_id)
+
+    if user_data:
         profile_message = (
             f"👤 *{user.first_name}* 【{user_data['faction']}】\n"
             f"🆔 *ID*: {user_data['user_id']}\n"
@@ -121,9 +108,10 @@ async def profile(update: Update, context: CallbackContext) -> None:
 async def roulette(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
-    users = load_users()
 
-    if user_id not in users:
+    user_data = get_user_by_id(user_id)
+
+    if not user_data:
         await update.message.reply_text("You need to start the bot first by using /start.")
         return
 
@@ -133,19 +121,18 @@ async def roulette(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Please use the format: /roulette <amount>")
         return
 
-    if bet_amount <= 0 or bet_amount > users[user_id]["credits"]:
+    if bet_amount <= 0 or bet_amount > user_data["credits"]:
         await update.message.reply_text("Invalid bet amount or insufficient credits.")
         return
 
     result = secrets.choice(["win", "lose"])
     if result == "win":
-        users[user_id]["credits"] += bet_amount * 2
+        update_user_credits(user_id, bet_amount * 2)
         message = f"🎉 You won! Your bet doubled to {bet_amount * 2} units."
     else:
-        users[user_id]["credits"] -= bet_amount
+        update_user_credits(user_id, -bet_amount)
         message = f"😞 You lost! {bet_amount} units have been deducted from your profile."
 
-    save_users(users)
     await update.message.reply_text(message)
 
 async def flip(update: Update, context: CallbackContext) -> None:
