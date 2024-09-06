@@ -123,11 +123,16 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("🔒 You don't have permission to use this command.")
         return
 
-    try:
-        user_id = context.args[0]
-        amount = int(context.args[1])
-    except (IndexError, ValueError):
+    # Ensure proper command format
+    if len(context.args) < 2:
         await update.message.reply_text("❗ Usage: /add primo <user_id> <amount>")
+        return
+
+    user_id = context.args[0]
+    try:
+        amount = int(context.args[1])
+    except ValueError:
+        await update.message.reply_text("❗ The amount must be a valid number.")
         return
 
     if amount <= 0:
@@ -140,29 +145,10 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❗ User with ID {user_id} does not exist.")
         return
 
-    user_data["credits"] += amount
+    user_data["credits"] = user_data.get("credits", 0) + amount
     save_genshin_user(user_data)
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 
-def draw_item(items):
-    weights = [1 / (item_star**2) for item_star in items.values()]
-    return random.choices(list(items.keys()), weights=weights, k=1)[0]
-
-def update_item(user_data, item, item_type):
-    if item_type not in user_data["bag"]:
-        user_data["bag"][item_type] = {}
-
-    if item not in user_data["bag"][item_type]:
-        user_data["bag"][item_type][item] = 1
-    else:
-        user_data["bag"][item_type][item] += 1
-
-    # Update refinement/constellation level
-    if user_data["bag"][item_type][item] > 1:
-        if item_type == "characters":
-            user_data["bag"][item_type][item] = f"✨ C{user_data['bag'][item_type][item]}"
-        elif item_type == "weapons":
-            user_data["bag"][item_type][item] = f"⚔️ R{user_data['bag'][item_type][item]}"
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
@@ -175,12 +161,14 @@ async def pull(update: Update, context: CallbackContext) -> None:
     try:
         number_of_pulls = int(context.args[0])
     except (IndexError, ValueError):
-        await update.message.reply_text("❗ Usage: /pull <number>")
+        await update.message.reply_text("❗ Usage: /pull <number_of_pulls>")
+        return
+
+    if number_of_pulls <= 0:
+        await update.message.reply_text("❗ The number of pulls must be greater than zero.")
         return
 
     total_cost = COST_PER_PULL * number_of_pulls
-    if number_of_pulls == 10:
-        total_cost = COST_PER_10_PULLS
 
     if total_cost > user_data["credits"]:
         await update.message.reply_text("🔺 Insufficient primogems.")
@@ -202,6 +190,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
     save_genshin_user(user_data)
     await update.message.reply_text(result_message, parse_mode="Markdown")
     logger.info(f"User {user_id} pulled {number_of_pulls} items")
+
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
