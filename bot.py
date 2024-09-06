@@ -9,6 +9,8 @@ from token_1 import token
 import random
 import secrets
 
+from genshin_game import pull, bag
+
 # Global variables
 OWNER_ID = 5667016949
 
@@ -17,7 +19,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
 
 client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
 db = client['telegram_bot']
@@ -62,7 +63,9 @@ async def start(update: Update, context: CallbackContext) -> None:
             "achievement": [],
             "faction": "None",
             "ban": None,
-            "title": "None"
+            "title": "None",
+            "primos": 0,
+            "bag": {}
         }
         save_user(new_user)
         logger.info(f"User {user_id} started the bot.")
@@ -86,24 +89,22 @@ async def profile(update: Update, context: CallbackContext) -> None:
         profile_message = (
             f"👤 *{user.first_name}* 【{user_data['faction']}】\n"
             f"🆔 *ID*: {user_data['user_id']}\n"
-            f"💰 *Units*: {user_data['credits']} 💎\n\n"
+            f"💰 *Units*: {user_data['credits']} 💎\n"
+            f"🎯 *Primos*: {user_data['primos']} ⭐\n\n"
             f"🏆 *Wins*: {user_data['win']}\n"
             f"💔 *Losses*: {user_data['loss']}\n\n"
             f"🎖️ *Title*: {user_data['title']}\n"
         )
 
         try:
-            photos = await context.bot.get_user_profile_photos(user_id=user.id)
-            if photos.total_count > 0:
-                await update.message.reply_photo(photos.photos[0][-1].file_id, caption=profile_message, parse_mode='Markdown')
-            else:
-                await update.message.reply_text(profile_message, parse_mode='Markdown')
+            photos = await context.bot.get_user_profile_photos(user_id)
+            photo = photos.photos[0][0].file_id
+            await update.message.reply_photo(photo=photo, caption=profile_message)
         except Exception as e:
-            logger.error(f"Error fetching profile picture for user {user_id}: {e}")
-            await update.message.reply_text(profile_message, parse_mode='Markdown')
+            logger.error(f"Error fetching user photo: {e}")
+            await update.message.reply_text(profile_message)
     else:
-        await update.message.reply_text("You have not started using the bot yet. Use /start to begin.")
-
+        await update.message.reply_text("You need to start the bot first by using /start.")
 # Roulette game
 async def roulette(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
@@ -365,6 +366,8 @@ def main():
     application.add_handler(CommandHandler('add', add_units))
     application.add_handler(CommandHandler('backup', backup))
     application.add_handler(CommandHandler('broadcast', broadcast))
+    application.add_handler(CommandHandler('pull', pull))
+    application.add_handler(CommandHandler('bag', bag))
     
 
     # Start polling
