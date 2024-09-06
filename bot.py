@@ -45,14 +45,13 @@ def escape_markdown_v2(text):
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
     return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
 
-# Start function
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
-    user_id = str(user.id)
+    user_id = str(user.id)  # Always ensure the user ID is treated as a string
 
-    existing_user = get_user_by_id(user_id)
+    existing_user = get_user_by_id(user_id)  # Fetch the user data from MongoDB
 
-    if not existing_user:
+    if existing_user is None:  # Check if the user doesn't exist
         new_user = {
             "user_id": user_id,
             "join_date": datetime.now().strftime('%m/%d/%y'),
@@ -67,16 +66,18 @@ async def start(update: Update, context: CallbackContext) -> None:
             "primos": 0,
             "bag": {}
         }
-        save_user(new_user)
+        save_user(new_user)  # Save the new user to the database
         logger.info(f"User {user_id} started the bot.")
 
         await update.message.reply_text(
             "Welcome! You've received 5000 credits to start betting. Use /profile to check your details."
         )
     else:
+        logger.info(f"User {user_id} already exists.")
         await update.message.reply_text(
             "You have already started the bot. Use /profile to view your details."
         )
+
 
 # Profile function
 async def profile(update: Update, context: CallbackContext) -> None:
