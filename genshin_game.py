@@ -26,8 +26,35 @@ CHARACTERS = {
     "Hu Tao": 5, "Ganyu": 5, "Zhongli": 5, "Raiden Shogun": 5, "Ayaka": 5, "Childe": 5, "Eula": 5,
     "Yae Miko": 5, "Tartaglia": 5, "Rosaria": 4, "Razor": 4, "Chongyun": 4, "Lisa": 4, "Barbara": 4,
     "Bennett": 4, "Fischl": 4, "Sucrose": 4, "Xingqiu": 4, "Xinyan": 4, "Ningguang": 4, "Beidou": 4,
-    "Amber": 4, "Kaeya": 4, "Noelle": 4
+    "Amber": 4, "Kaeya": 4, "Noelle": 4, "Diluc": 5, "Jean": 5, "Qiqi": 5, "Venti": 5, "Mona": 5,
+    "Keqing": 5, "Albedo": 5, "Kazuha": 5, "Hu Tao": 5, "Ganyu": 5, "Zhongli": 5, "Raiden Shogun": 5,
+    "Ayaka": 5, "Childe": 5, "Eula": 5, "Yae Miko": 5, "Tartaglia": 5, "Rosaria": 4, "Razor": 4,
+    "Chongyun": 4, "Lisa": 4, "Barbara": 4, "Bennett": 4, "Fischl": 4, "Sucrose": 4, "Xingqiu": 4,
+    "Xinyan": 4, "Ningguang": 4, "Beidou": 4, "Amber": 4, "Kaeya": 4, "Noelle": 4, "Rosaria": 4,
+    "Razor": 4, "Chongyun": 4, "Lisa": 4, "Barbara": 4, "Bennett": 4, "Fischl": 4, "Sucrose": 4,
+    "Xingqiu": 4, "Xinyan": 4, "Ningguang": 4, "Beidou": 4, "Amber": 4, "Kaeya": 4, "Noelle": 4,
+    "Diluc": 5, "Jean": 5, "Qiqi": 5, "Venti": 5, "Mona": 5, "Keqing": 5, "Albedo": 5, "Kazuha": 5,
+    "Hu Tao": 5, "Ganyu": 5, "Zhongli": 5, "Raiden Shogun": 5, "Ayaka": 5, "Childe": 5, "Eula": 5,
+    "Yae Miko": 5, "Tartaglia": 5, "Rosaria": 4, "Razor": 4, "Chongyun": 4, "Lisa": 4, "Barbara": 4,
+    "Bennett": 4, "Fischl": 4, "Sucrose": 4, "Xingqiu": 4, "Xinyan": 4, "Ningguang": 4, "Beidou": 4,
+    "Amber": 4, "Kaeya": 4, "Noelle": 4, "Rosaria": 4, "Razor": 4, "Chongyun": 4, "Lisa": 4,
+    "Barbara": 4, "Bennett": 4, "Fischl": 4, "Sucrose": 4, "Xingqiu": 4, "Xinyan": 4, "Ningguang": 4,
+    "Beidou": 4, "Amber": 4, "Kaeya": 4, "Noelle": 4, "Diluc": 5, "Jean": 5, "Qiqi": 5, "Venti": 5,
+    "Mona": 5, "Keqing": 5, "Albedo": 5, "Kazuha": 5, "Hu Tao": 5, "Ganyu": 5, "Zhongli": 5,
+    "Raiden Shogun": 5, "Ayaka": 5, "Childe": 5, "Eula": 5, "Yae Miko": 5, "Tartaglia": 5, "Rosaria": 4,
+    "Razor": 4, "Chongyun": 4, "Lisa": 4, "Barbara": 4, "Bennett": 4, "Fischl": 4, "Sucrose": 4,
+    "Xingqiu": 4, "Xinyan": 4, "Ningguang": 4, "Beidou": 4, "Amber": 4, "Kaeya": 4, "Noelle": 4,
+    "Diluc": 5, "Jean": 5, "Qiqi": 5, "Venti": 5, "Mona": 5, "Keqing": 5, "Albedo": 5, "Kazuha": 5,
+    "Hu Tao": 5, "Ganyu": 5, "Zhongli": 5, "Raiden Shogun": 5, "Ayaka": 5, "Childe": 5, "Eula": 5,
+    "Yae Miko": 5, "Tartaglia": 5, "Rosaria": 4, "Razor": 4, "Chongyun": 4, "Lisa": 4, "Barbara": 4,
+    "Bennett": 4, "Fischl": 4, "Sucrose": 4, "Xingqiu": 4, "Xinyan": 4, "Ningguang": 4, "Beidou": 4,
+    "Amber": 4, "Kaeya": 4, "Noelle": 4, "Rosaria": 4, "Razor": 4, "Chongyun": 4, "Lisa": 4,
+    "Barbara": 4, "Bennett": 4, "Fischl": 4, "Sucrose": 4, "Xingqiu": 4, "Xinyan": 4, "Ningguang": 4,
+    "Beidou": 4, "Amber": 4, "Kaeya": 4, "Noelle": 4, "Diluc": 5, "Jean": 5, "Qiqi": 5, "Venti": 5,
+    "Mona": 5, "Keqing": 5, "Albedo": 5, "Kazuha": 5, "Hu Tao": 5, "Ganyu": 5, "Zhongli": 5,
+    "Raiden Shogun": 5, "Ayaka": 5, "Childe": 5, "Eula": 5, "Yae Miko": 5, "Tartaglia": 5
 }
+
 
 # Comprehensive list of weapons with their star ratings
 WEAPONS = {
@@ -35,8 +62,32 @@ WEAPONS = {
     "Rust": 4, "Sacrificial Sword": 4, "Skyward Blade": 5, "Serpent Spine": 4, "Lost Prayer to the Sacred Winds": 5,
     "Primordial Jade Cutter": 5, "The Sacrificial Greatsword": 4, "Crescent Pike": 4, "Rainslasher": 4,
     "White Tassel": 3, "Dragon's Bane": 4, "Prototype Amber": 4, "The Widsith": 4, "Prototype Rancour": 4,
-    "The Bell": 4, "Katsuragikiri Nagamasa": 4, "The Viridescent Hunt": 4
+    "The Bell": 4, "Katsuragikiri Nagamasa": 4, "The Viridescent Hunt": 4, "The Black Sword": 5,
+    "Summit Shaper": 5, "Memory of Dust": 5, "The Alley Flash": 4, "Iron Sting": 4, "The Rainslasher": 4,
+    "The Catch": 4, "Kagotsurube Isshin": 5, "Freedom-Sworn": 5, "Flowing Purity": 4, "Cursed Blade": 4,
+    "Aquila Favonia": 5, "The Stringless": 4, "Skyward Spine": 5, "The Flute": 4, "Deathmatch": 4,
+    "Rust": 4, "Sacrificial Sword": 4, "Skyward Blade": 5, "Serpent Spine": 4, "Lost Prayer to the Sacred Winds": 5,
+    "Primordial Jade Cutter": 5, "The Sacrificial Greatsword": 4, "Crescent Pike": 4, "Rainslasher": 4,
+    "White Tassel": 3, "Dragon's Bane": 4, "Prototype Amber": 4, "The Widsith": 4, "Prototype Rancour": 4,
+    "The Bell": 4, "Katsuragikiri Nagamasa": 4, "The Viridescent Hunt": 4, "The Black Sword": 5,
+    "Summit Shaper": 5, "Memory of Dust": 5, "The Alley Flash": 4, "Iron Sting": 4, "The Rainslasher": 4,
+    "The Catch": 4, "Kagotsurube Isshin": 5, "Freedom-Sworn": 5, "Flowing Purity": 4, "Cursed Blade": 4,
+    "Aquila Favonia": 5, "The Stringless": 4, "Skyward Spine": 5, "The Flute": 4, "Deathmatch": 4,
+    "Rust": 4, "Sacrificial Sword": 4, "Skyward Blade": 5, "Serpent Spine": 4, "Lost Prayer to the Sacred Winds": 5,
+    "Primordial Jade Cutter": 5, "The Sacrificial Greatsword": 4, "Crescent Pike": 4, "Rainslasher": 4,
+    "White Tassel": 3, "Dragon's Bane": 4, "Prototype Amber": 4, "The Widsith": 4, "Prototype Rancour": 4,
+    "The Bell": 4, "Katsuragikiri Nagamasa": 4, "The Viridescent Hunt": 4, "The Black Sword": 5,
+    "Summit Shaper": 5, "Memory of Dust": 5, "The Alley Flash": 4, "Iron Sting": 4, "The Rainslasher": 4,
+    "The Catch": 4, "Kagotsurube Isshin": 5, "Freedom-Sworn": 5, "Flowing Purity": 4, "Cursed Blade": 4,
+    "Aquila Favonia": 5, "The Stringless": 4, "Skyward Spine": 5, "The Flute": 4, "Deathmatch": 4,
+    "Rust": 4, "Sacrificial Sword": 4, "Skyward Blade": 5, "Serpent Spine": 4, "Lost Prayer to the Sacred Winds": 5,
+    "Primordial Jade Cutter": 5, "The Sacrificial Greatsword": 4, "Crescent Pike": 4, "Rainslasher": 4,
+    "White Tassel": 3, "Dragon's Bane": 4, "Prototype Amber": 4, "The Widsith": 4, "Prototype Rancour": 4,
+    "The Bell": 4, "Katsuragikiri Nagamasa": 4, "The Viridescent Hunt": 4, "The Black Sword": 5,
+    "Summit Shaper": 5, "Memory of Dust": 5, "The Alley Flash": 4, "Iron Sting": 4, "The Rainslasher": 4,
+    "The Catch": 4, "Kagotsurube Isshin": 5, "Freedom-Sworn": 5, "Flowing Purity": 4, "Cursed Blade": 4
 }
+
 
 # Function to get user data from the genshin_users collection
 def get_genshin_user_by_id(user_id):
@@ -94,11 +145,12 @@ async def start(update: Update, context: CallbackContext) -> None:
     if existing_genshin_user is None:
         new_genshin_user = {
             "user_id": user_id,
-            "credits": 50000,  # Adjust initial primogems as needed
+            "credits": 3200,  # Initial primogems
             "bag": {}
         }
         save_genshin_user(new_genshin_user)
         logger.info(f"Genshin user {user_id} initialized.")
+
 
 async def reward_primos(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
@@ -108,7 +160,7 @@ async def reward_primos(update: Update, context: CallbackContext) -> None:
         # Create user data if not present
         user_data = {
             "user_id": user_id,
-            "credits": 50000,  # Initial primogems
+            "credits": 3200,  # Initial primogems
             "bag": {}
         }
         save_genshin_user(user_data)
