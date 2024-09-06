@@ -106,6 +106,7 @@ async def profile(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text(profile_message)
     else:
         await update.message.reply_text("You need to start the bot first by using /start.")
+
 # Roulette game
 async def roulette(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
@@ -137,11 +138,12 @@ async def roulette(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(message)
 
+# Flip game
 async def flip(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
-    users = load_users()
 
-    if user_id not in users:
+    user_data = get_user_by_id(user_id)
+    if not user_data:
         await update.message.reply_text("You need to start the bot first by using /start.")
         return
 
@@ -156,22 +158,19 @@ async def flip(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Invalid choice. Use 'H' for heads or 'T' for tails.")
         return
 
-    if bet_amount <= 0 or bet_amount > users[user_id]["credits"]:
+    if bet_amount <= 0 or bet_amount > user_data["credits"]:
         await update.message.reply_text("Invalid bet amount.")
         return
 
     result = random.choice(["H", "T"])
     if result == choice:
-        users[user_id]["credits"] += bet_amount
+        update_user_credits(user_id, bet_amount)
         message = f"🎉 You won! {bet_amount} credits added."
     else:
-        users[user_id]["credits"] -= bet_amount
+        update_user_credits(user_id, -bet_amount)
         message = f"😞 You lost! {bet_amount} credits deducted."
 
-    save_users(users)
     await update.message.reply_text(message)
-
-# Generic bet command
 async def bet(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
@@ -204,10 +203,6 @@ async def bet(update: Update, context: CallbackContext) -> None:
     save_users(users)
     await update.message.reply_text(message)
 
-
-import random
-
-# Dart game function
 async def dart(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     users = load_users()
