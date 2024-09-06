@@ -1,6 +1,11 @@
 from telegram import Update
 from telegram.ext import CallbackContext
 import random
+from pymongo import MongoClient
+
+client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
+db = client['telegram_bot']
+genshin_collection = db["genshin_users"]
 
 # Define the primogem cost
 COST_PER_PULL = 160
@@ -40,13 +45,11 @@ async def reward_primos(update: Update, context: CallbackContext):
 
 # Function to get user data
 def get_user_by_id(user_id):
-    # Fetch user data from your database (add MongoDB query here)
-    pass
+    return genshin_collection.find_one({"user_id": user_id})
 
 # Function to save user data
 def save_user(user_data):
-    # Save user data to your database (add MongoDB save logic here)
-    pass
+    genshin_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
 
 def draw_item(items):
     weights = [1/(item_star**2) for item_star in items.values()]
