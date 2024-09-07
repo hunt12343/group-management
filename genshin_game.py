@@ -191,7 +191,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     user_data["primos"] -= total_cost
 
-    items_pulled = []
+    items_pulled = {"characters": [], "weapons": []}
     for _ in range(number_of_pulls):
         if random.random() < BASE_5_STAR_RATE:
             item = draw_item({k: v for k, v in CHARACTERS.items() if v == 5})
@@ -200,12 +200,24 @@ async def pull(update: Update, context: CallbackContext) -> None:
             item = draw_item(WEAPONS)
             item_type = "weapons"
 
-        items_pulled.append(item)
+        items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
 
     save_genshin_user(user_data)
-    await update.message.reply_text(f"🔹 You pulled: {', '.join(items_pulled)}")
-    await update.message.reply_text(f"🔹 Remaining primogems: {user_data['primos']}")
+
+    # Format the response message
+    characters_str = "\n".join([f"✨ {char}" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
+    weapons_str = "\n".join([f"⚔️ {weapon}" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
+
+    response = (
+        "🔹 **Pull Results:**\n\n"
+        f"{characters_str}\n"
+        f"{weapons_str}\n\n"
+        f"💎 **Remaining Primogems:** {user_data['primos']}"
+    )
+
+    await update.message.reply_text(response, parse_mode='Markdown')
+
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
@@ -215,24 +227,15 @@ async def bag(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
 
-    if not user_data["bag"]:
-        await update.message.reply_text("🔹 Your bag is empty.")
-        return
-
-    primos = user_data.get("primos", 0)  # Get the number of primogems the user has
-
+    primos = user_data.get("primos", 0)
     characters = user_data["bag"].get("characters", {})
     weapons = user_data["bag"].get("weapons", {})
 
-    if not characters and not weapons:
-        await update.message.reply_text("🔹 Your bag is empty.")
-        return
+    characters_list = [f"✨ {char}: {info}" for char, info in characters.items()]
+    weapons_list = [f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]
 
-    characters_list = [f"{char}: {info}" for char, info in characters.items()]
-    weapons_list = [f"{weapon}: {info}" for weapon, info in weapons.items()]
-
-    characters_str = "\n".join(characters_list) if characters_list else "No characters pulled yet."
-    weapons_str = "\n".join(weapons_list) if weapons_list else "No weapons pulled yet."
+    characters_str = "\n".join(characters_list) if characters_list else "No characters in bag."
+    weapons_str = "\n".join(weapons_list) if weapons_list else "No weapons in bag."
 
     response = (
         "🔹 **Your Bag:**\n\n"
