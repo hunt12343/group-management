@@ -202,83 +202,67 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
     save_genshin_user(user_data)
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 
-def format_pull_results(results, bag):
-    formatted_results = []
-    for result in results:
-        # If result is in characters or weapons, extract its refinement/constellation level
-        if result in bag['characters']:
-            refinement_level = bag['characters'].get(result, 1)
-            formatted_results.append(f"✨ {result} — Constellation: C{refinement_level}")
-        elif result in bag['weapons']:
-            refinement_level = bag['weapons'].get(result, 1)
-            formatted_results.append(f"🔪 {result} — Refinement: R{refinement_level}")
-        else:
-            formatted_results.append(f"✨ {result}")  # Fallback in case something is missing
-    return "\n".join(formatted_results)
+
+def draw_item(items):
+    weights = [1 / (item_star**2) for item_star in items.values()]
+    return random.choices(list(items.keys()), weights=weights, k=1)[0]
+
+def update_item(user_data, item, item_type):
+    if item_type not in user_data["bag"]:
+        user_data["bag"][item_type] = {}
+
+    if item not in user_data["bag"][item_type]:
+        user_data["bag"][item_type][item] = 1
+    else:
+        user_data["bag"][item_type][item] += 1
+
+    # Update refinement/constellation level
+    if user_data["bag"][item_type][item] > 1:
+        if item_type == "characters":
+            user_data["bag"][item_type][item] = f"✨ C{user_data['bag'][item_type][item]}"
+        elif item_type == "weapons":
+            user_data["bag"][item_type][item] = f"⚔️ R{user_data['bag'][item_type][item]}"
 
 async def pull(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    user_id = str(user.id)
-    
-    genshin_user = get_genshin_user_by_id(user_id)
-    
-    if genshin_user is None:
-        await update.message.reply_text("⚠️ You need to start the game first using /start.")
+    user_id = str(update.effective_user.id)
+    user_data = get_genshin_user_by_id(user_id)
+
+    if not user_data:
+        await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
 
-    num_pulls = 1
-    if context.args and context.args[0].isdigit():
-        num_pulls = int(context.args[0])
-
-    total_cost = COST_PER_PULL if num_pulls == 1 else COST_PER_10_PULLS
-    
-    if genshin_user['primos'] < total_cost:
-        await update.message.reply_text(f"❌ You don't have enough primogems for this pull!\nYou need {total_cost} primogems.")
+    try:
+        number_of_pulls = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("❗ Usage: /pull <number_of_pulls>")
         return
+
+    if number_of_pulls < 1 or number_of_pulls > 10:
+        await update.message.reply_text("❗ You can pull between 1 and 10 times.")
+        return
+
+    total_cost = 160 * number_of_pulls
+
+    if total_cost > user_data["credits"]:
+        await update.message.reply_text("🔺 Insufficient primogems.")
+        return
+
+    user_data["credits"] -= total_cost
+
+    all_items = {**CHARACTERS, **WEAPONS}
+    results = [draw_item(all_items) for _ in range(number_of_pulls)]
+
+    result_message = "🎉 **You pulled the following items:**\n\n"
+    for item in results:
+        item_type = "characters" if item in CHARACTERS else "weapons"
+        update_item(user_data, item, item_type)
+        result_message += f"🔹 {item} - {CHARACTERS.get(item, WEAPONS.get(item))}⭐\n"
+
+    result_message += f"\n💎 You spent {total_cost} Primogems!\n"
+
+    save_genshin_user(user_data)
+    await update.message.reply_text(result_message, parse_mode="Markdown")
     
-    genshin_user['primos'] -= total_cost
-    
-    pulls_since_last_5_star = genshin_user.get('pulls_since_last_5_star', 0)
-
-    results = []
-    for _ in range(num_pulls):
-        pulls_since_last_5_star += 1
-        
-        if pulls_since_last_5_star >= SOFT_PITY_THRESHOLD:
-            pity_bonus = (pulls_since_last_5_star - SOFT_PITY_THRESHOLD) * 0.06
-            current_5_star_rate = min(BASE_5_STAR_RATE + pity_bonus, 1.0)
-        else:
-            current_5_star_rate = BASE_5_STAR_RATE
-
-        if pulls_since_last_5_star >= HARD_PITY_THRESHOLD:
-            item = random.choice([char for char, stars in CHARACTERS.items() if stars == 5])
-            pulls_since_last_5_star = 0
-        else:
-            if random.random() <= current_5_star_rate:
-                item = random.choice([char for char, stars in CHARACTERS.items() if stars == 5])
-                pulls_since_last_5_star = 0
-            else:
-                item = random.choice([char for char, stars in CHARACTERS.items() if stars == 4])
-        
-        results.append(item)
-
-    genshin_user['pulls_since_last_5_star'] = pulls_since_last_5_star
-    
-    genshin_user['bag'] = genshin_user.get('bag', {})
-    
-    for result in results:
-        if result in genshin_user['bag']:
-            genshin_user['bag'][result] += 1
-        else:
-            genshin_user['bag'][result] = 1
-
-    save_genshin_user(genshin_user)
-
-    formatted_results = format_pull_results(results, genshin_user['bag'])
-    await update.message.reply_text(
-        f"🎁 **Your Pull Results:**\n{formatted_results}\n\n💎 **Remaining Primogems:** {genshin_user['primos']}\n🔮 **Pulls Since Last 5-Star:** {genshin_user['pulls_since_last_5_star']}",
-        parse_mode=ParseMode.MARKDOWN
-    )
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -287,19 +271,20 @@ async def bag(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
 
-    bag_message = "🎒 **Your Bag**:\n"
+    primos = user_data.get("Primos", 0)  # Adjust to get primos instead of credits if necessary
+    bag_message = f"🎒 **Your Bag**:\n\n💎 **Primos**: {primos}\n"
 
-    # Show primos separately
-    bag_message += f"💎 **Primos**: {user_data['primos']} ⭐\n\n"
-
-    # Show pulled characters and weapons
-    if 'bag' in user_data and user_data['bag']:
-        bag_message += "🗃️ **Pulled Items**:\n"
-        for item, count in user_data['bag'].items():
-            bag_message += f"🔹 {item}: {count}\n"
-    else:
+    if "bag" not in user_data or not user_data["bag"]:
         bag_message += "🎒 Your bag is empty."
+    else:
+        for item_type, items in user_data["bag"].items():
+            bag_message += f"\n🗃️ **{item_type.capitalize()}**:\n"
+            for item, count in items.items():
+                # Add proper display for refinement/constellation
+                if item_type == "characters":
+                    bag_message += f"🔹 {item}: {count}\n"
+                elif item_type == "weapons":
+                    bag_message += f"🔹 {item}: {count}\n"
 
     await update.message.reply_text(bag_message, parse_mode="Markdown")
-    logger.info(f"User {user_id} viewed their bag")
 
