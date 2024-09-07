@@ -157,14 +157,25 @@ def update_item(user_data, item, item_type):
     if item not in user_data["bag"][item_type]:
         user_data["bag"][item_type][item] = 1
     else:
-        user_data["bag"][item_type][item] += 1
+        # Get the current count of the item
+        current_count = user_data["bag"][item_type][item]
+        
+        # Check if the item count is stored as an integer or a string
+        if isinstance(current_count, int):
+            user_data["bag"][item_type][item] += 1
+        else:
+            # Extract the current refinement level or constellation level
+            if item_type == "characters":
+                # Extract the numerical part of the level
+                current_level = int(current_count.split('C')[1]) if 'C' in current_count else 0
+                new_level = current_level + 1
+                user_data["bag"][item_type][item] = f"✨ C{new_level}"
+            elif item_type == "weapons":
+                # Extract the numerical part of the level
+                current_level = int(current_count.split('R')[1]) if 'R' in current_count else 0
+                new_level = current_level + 1
+                user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
 
-    # Update refinement/constellation level
-    if user_data["bag"][item_type][item] > 1:
-        if item_type == "characters":
-            user_data["bag"][item_type][item] = f"✨ C{user_data['bag'][item_type][item]}"
-        elif item_type == "weapons":
-            user_data["bag"][item_type][item] = f"⚔️ R{user_data['bag'][item_type][item]}"
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
