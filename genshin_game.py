@@ -14,37 +14,82 @@ db = client['telegram_bot']
 user_collection = db["users"]
 genshin_collection = db["genshin_users"]
 
-HARD_PITY_THRESHOLD = 90
-SOFT_PITY_THRESHOLD = 75
-COST_PER_PULL = 160
-COST_PER_10_PULLS = 1600
-BASE_5_STAR_RATE = 0.06
+BASE_5_STAR_RATE = 0.02  
+HIGH_5_STAR_RATE = 0.60  
+PULL_THRESHOLD = 10      
+HIGH_PULL_THRESHOLD = 70  
+COST_PER_PULL = 160 
 
-# Comprehensive list of characters with their star ratings
+
 CHARACTERS = {
-    "Diluc": 5, "Jean": 5, "Qiqi": 5, "Venti": 5, "Mona": 5, "Keqing": 5, "Albedo": 5, "Kazuha": 5,
-    "Hu Tao": 5, "Ganyu": 5, "Zhongli": 5, "Raiden Shogun": 5, "Ayaka": 5, "Childe": 5, "Eula": 5,
-    "Yae Miko": 5, "Tartaglia": 5, "Rosaria": 4, "Razor": 4, "Chongyun": 4, "Lisa": 4, "Barbara": 4,
-    "Bennett": 4, "Fischl": 4, "Sucrose": 4, "Xingqiu": 4, "Xinyan": 4, "Ningguang": 4, "Beidou": 4,
-    "Amber": 4, "Kaeya": 4, "Noelle": 4
+    # 5-star characters
+    "Albedo": 5, "Alhaitham": 5, "Aloy": 5, "Ayaka": 5, "Ayato": 5, "Baizhu": 5, "Cyno": 5, 
+    "Dehya": 5, "Diluc": 5, "Eula": 5, "Ganyu": 5, "Hu Tao": 5, "Itto": 5, "Jean": 5, 
+    "Kazuha": 5, "Keqing": 5, "Klee": 5, "Kokomi": 5, "Lyney": 5, "Mona": 5, "Nahida": 5, 
+    "Nilou": 5, "Qiqi": 5, "Raiden": 5, "Shenhe": 5, "Tighnari": 5, "Venti": 5, "Wanderer": 5, 
+    "Xiao": 5, "Yae Miko": 5, "Yelan": 5, "Yoimiya": 5, "Zhongli": 5,
+
+    # 4-star characters
+    "Amber": 4, "Barbara": 4, "Beidou": 4, "Bennett": 4, "Candace": 4, "Chongyun": 4, 
+    "Collei": 4, "Diona": 4, "Dori": 4, "Fischl": 4, "Gorou": 4, "Heizou": 4, "Kaeya": 4, 
+    "Kuki Shinobu": 4, "Layla": 4, "Lisa": 4, "Ningguang": 4, "Noelle": 4, "Razor": 4, 
+    "Rosaria": 4, "Sara": 4, "Sayu": 4, "Sucrose": 4, "Thoma": 4, "Xiangling": 4, 
+    "Xingqiu": 4, "Xinyan": 4, "Yanfei": 4, "Yaoyao": 4, "Yun Jin": 4
 }
+
 
 # Comprehensive list of weapons with their star ratings
 WEAPONS = {
-    "Aquila Favonia": 5, "The Stringless": 4, "Skyward Spine": 5, "The Flute": 4, "Deathmatch": 4,
-    "Rust": 4, "Sacrificial Sword": 4, "Skyward Blade": 5, "Serpent Spine": 4, "Lost Prayer to the Sacred Winds": 5,
-    "Primordial Jade Cutter": 5, "The Sacrificial Greatsword": 4, "Crescent Pike": 4, "Rainslasher": 4,
-    "White Tassel": 3, "Dragon's Bane": 4, "Prototype Amber": 4, "The Widsith": 4, "Prototype Rancour": 4,
-    "The Bell": 4, "Katsuragikiri Nagamasa": 4, "The Viridescent Hunt": 4, "The Black Sword": 5,
-    "Summit Shaper": 5, "Memory of Dust": 5, "The Alley Flash": 4, "Iron Sting": 4, "The Catch": 4,
-    "Kagotsurube Isshin": 5, "Freedom-Sworn": 5, "Flowing Purity": 4, "Cursed Blade": 4
+    # 5-star weapons
+    "Aquila Favonia": 5, "Amos' Bow": 5, "Aqua Simulacra": 5, "Calamity Queller": 5, "Crimson Moon's Semblance": 5,
+    "Elegy for the End": 5, "Engulfing Lightning": 5, "Everlasting Moonglow": 5, "Freedom-Sworn": 5,
+    "Haran Geppaku Futsu": 5, "Hunter's Path": 5, "Jadefall's Splendor": 5, "Kagura's Verity": 5,
+    "Key of Khaj-Nisut": 5, "Light of Foliar Incision": 5, "Lost Prayer to the Sacred Winds": 5,
+    "Lumidouce Elegy": 5, "Memory of Dust": 5, "Mistsplitter Reforged": 5, "Polar Star": 5,
+    "Primordial Jade Cutter": 5, "Primordial Jade Winged-Spear": 5, "Redhorn Stonethresher": 5,
+    "Song of Broken Pines": 5, "Staff of Homa": 5, "Staff of the Scarlet Sands": 5, "Summit Shaper": 5,
+    "The First Great Magic": 5, "The Unforged": 5, "Thundering Pulse": 5, "Tome of the Eternal Flow": 5,
+    "Tulaytullah's Remembrance": 5, "Uraku Misugiri": 5, "Verdict": 5, "Vortex Vanquisher": 5, "Wolf's Gravestone": 5,
+
+    # 4-star weapons
+    "Akuoumaru": 4, "Alley Hunter": 4, "Amenoma Kageuchi": 4, "Ballad of the Boundless Blue": 4,
+    "Ballad of the Fjords": 4, "Blackcliff Agate": 4, "Blackcliff Longsword": 4, "Blackcliff Pole": 4,
+    "Blackcliff Slasher": 4, "Blackcliff Warbow": 4, "Cloudforged": 4, "Cinnabar Spindle": 4,
+    "Compound Bow": 4, "Crescent Pike": 4, "Deathmatch": 4, "Dodoco Tales": 4, "Dragon's Bane": 4,
+    "Dragonspine Spear": 4, "End of the Line": 4, "Eye of Perception": 4, "Fading Twilight": 4,
+    "Favonius Codex": 4, "Favonius Greatsword": 4, "Favonius Lance": 4, "Favonius Sword": 4,
+    "Favonius Warbow": 4, "Festering Desire": 4, "Finale of the Deep": 4, "Fleuve Cendre Ferryman": 4,
+    "Flowing Purity": 4, "Forest Regalia": 4, "Frostbearer": 4, "Fruit of Fulfillment": 4, "Hakushin Ring": 4,
+    "Hamayumi": 4, "Iron Sting": 4, "Kagotsurube Isshin": 4, "Kitain Cross Spear": 4, "Lion's Roar": 4,
+    "Lithic Blade": 4, "Lithic Spear": 4, "Luxurious Sea-Lord": 4, "Mailed Flower": 4, "Makhaira Aquamarine": 4,
+    "Mappa Mare": 4, "Missive Windspear": 4, "Mitternachts Waltz": 4, "Moonpiercer": 4, "Mouun's Moon": 4,
+    "Oathsworn Eye": 4, "Portable Power Saw": 4, "Predator": 4, "Prospector's Drill": 4, "Prototype Amber": 4,
+    "Prototype Archaic": 4, "Prototype Crescent": 4, "Prototype Rancour": 4, "Prototype Starglitter": 4,
+    "Rainslasher": 4, "Range Gauge": 4, "Rightful Reward": 4, "Royal Bow": 4, "Royal Greatsword": 4,
+    "Royal Grimoire": 4, "Royal Longsword": 4, "Royal Spear": 4, "Rust": 4, "Sacrificial Bow": 4,
+    "Sacrificial Fragments": 4, "Sacrificial Greatsword": 4, "Sacrificial Jade": 4, "Sacrificial Sword": 4,
+    "Sapwood Blade": 4, "Scion of the Blazing Sun": 4, "Serpent Spine": 4, "Snow-Tombed Starsilver": 4,
+    "Solar Pearl": 4, "Song of Stillness": 4, "Sword of Descension": 4, "Sword of Narzissenkreuz": 4,
+    "Talking Stick": 4, "The Alley Flash": 4, "The Bell": 4, "The Black Sword": 4, "The Catch": 4,
+    "The Dockhand's Assistant": 4, "The Flute": 4, "The Stringless": 4, "The Viridescent Hunt": 4,
+    "The Widsith": 4, "Tidal Shadow": 4, "Toukabou Shigure": 4, "Ultimate Overlord's Mega Magic Sword": 4,
+    "Wandering Evenstar": 4, "Wavebreaker's Fin": 4, "Whiteblind": 4, "Windblume Ode": 4, "Wine and Song": 4,
+    "Wolf-Fang": 4, "Xiphos' Moonlight": 4,
+
+    # 3-star weapons
+    "Black Tassel": 3, "Bloodtainted Greatsword": 3, "Cool Steel": 3, "Dark Iron Sword": 3,
+    "Debate Club": 3, "Emerald Orb": 3, "Ferrous Shadow": 3, "Fillet Blade": 3, "Halberd": 3,
+    "Harbinger of Dawn": 3, "Magic Guide": 3, "Messenger": 3, "Otherworldly Story": 3,
+    "Raven Bow": 3, "Recurve Bow": 3, "Sharpshooter's Oath": 3, "Skyrider Greatsword": 3,
+    "Skyrider Sword": 3, "Slingshot": 3, "Thrilling Tales of Dragon Slayers": 3, "Traveler's Handy Sword": 3,
+    "Twin Nephrite": 3, "White Iron Greatsword": 3, "White Tassel": 3
 }
 
-# Function to get user data from the genshin_users collection
+
 def get_genshin_user_by_id(user_id):
     return genshin_collection.find_one({"user_id": user_id})
 
-# Function to save user data to the genshin_users collection
+
 def save_genshin_user(user_data):
     genshin_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
 
@@ -146,9 +191,36 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
     save_genshin_user(user_data)
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 
-def draw_item(items):
-    weights = [1 / (item_star**2) for item_star in items.values()]
-    return random.choices(list(items.keys()), weights=weights, k=1)[0]
+def draw_item(items, pull_counter, last_five_star_pull):
+    # Check if a guaranteed 4-star should be given
+    if pull_counter % PULL_THRESHOLD == 0:
+        item = draw_4_star_item(items)
+        return item, "characters" if "character" in item else "weapons"
+
+    # Adjust 5-star chance based on the number of pulls
+    if pull_counter >= HIGH_PULL_THRESHOLD:
+        five_star_chance = HIGH_5_STAR_RATE
+    else:
+        five_star_chance = BASE_5_STAR_RATE
+
+    if random.random() < five_star_chance:
+        item = draw_5_star_item(items)
+        return item, "characters" if "character" in item else "weapons"
+
+    # If no 5-star or guaranteed 4-star, draw a 3-star item
+    return draw_3_star_item(items), "weapons"
+
+def draw_5_star_item(items):
+    five_star_items = {k: v for k, v in items.items() if v == 5}
+    return random.choice(list(five_star_items.keys()))
+
+def draw_4_star_item(items):
+    four_star_items = {k: v for k, v in items.items() if v == 4}
+    return random.choice(list(four_star_items.keys()))
+
+def draw_3_star_item(items):
+    three_star_items = {k: v for k, v in items.items() if v == 3}
+    return random.choice(list(three_star_items.keys()))
 
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
@@ -202,21 +274,29 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     user_data["primos"] -= total_cost
 
+    pull_counter = user_data.get("pull_counter", 0)
+    last_five_star_pull = user_data.get("last_five_star_pull", 0)
+
     items_pulled = {"characters": [], "weapons": []}
     for _ in range(number_of_pulls):
-        if random.random() < BASE_5_STAR_RATE:
-            item = draw_item({k: v for k, v in CHARACTERS.items() if v == 5})
-            item_type = "characters"
-        else:
-            item = draw_item(WEAPONS)
-            item_type = "weapons"
+        pull_counter += 1
+        item, item_type = draw_item(CHARACTERS if item_type == "characters" else WEAPONS, pull_counter, last_five_star_pull)
 
-        items_pulled[item_type].append(item)
+        if item_type == "characters":
+            items_pulled["characters"].append(item)
+        else:
+            items_pulled["weapons"].append(item)
+        
         update_item(user_data, item, item_type)
 
+        if "5-star" in item:
+            last_five_star_pull = pull_counter
+            pull_counter = 0  # Reset counter after getting a 5-star item
+
+    user_data["pull_counter"] = pull_counter
+    user_data["last_five_star_pull"] = last_five_star_pull
     save_genshin_user(user_data)
 
-    # Format the response message
     characters_str = "\n".join([f"✨ {char}" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
     weapons_str = "\n".join([f"⚔️ {weapon}" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
 
@@ -228,6 +308,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
     )
 
     await update.message.reply_text(response, parse_mode='Markdown')
+
 
 
 async def bag(update: Update, context: CallbackContext) -> None:
