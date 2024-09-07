@@ -354,6 +354,21 @@ def get_all_genshin_users():
     return list(genshin_collection.find({}, {"_id": 0, "user_id": 1, "primos": 1}))
 
 async def leaderboard(update: Update, context: CallbackContext) -> None:
+    # Fetch all users and sort by primogems
+    users = get_all_genshin_users()
+    sorted_users = sorted(users, key=lambda x: x.get('primos', 0), reverse=True)
+
+    # Format the leaderboard response
+    leaderboard_str = "🔹 **Leaderboard:**\n\n"
+    for i, user in enumerate(sorted_users[:10], start=1):
+        # Get the user's first name or fallback to 'Unknown' if not available
+        first_name = user.get("first_name", "Unknown")
+        primogems = user.get("primos", 0)
+        leaderboard_str += f"{i}. 🏆 {first_name} - {primogems} Primogems\n"
+
+    # Send the response
+    await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
+async def leaderboard(update: Update, context: CallbackContext) -> None:
     users = get_all_genshin_users()
     
     if not users:
