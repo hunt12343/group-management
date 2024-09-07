@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 from telegram.ext import MessageHandler, filters
 from token_1 import token
 
-from genshin_game import pull, bag, reward_primos
+from genshin_game import pull, bag, reward_primos, add_primos
 
 # Global variables
 OWNER_ID = 5667016949
@@ -286,6 +286,9 @@ def main() -> None:
     application.add_handler(CommandHandler("add", add))
     application.add_handler(CommandHandler("pull", pull))
     application.add_handler(CommandHandler("bag", bag))
+    application.add_handler(CommandHandler('add_primo', add_primos))
+
+ 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reward_primos))
 
     application.run_polling()
