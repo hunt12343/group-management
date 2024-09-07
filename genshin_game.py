@@ -274,30 +274,22 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     user_data["primos"] -= total_cost
 
-    pull_counter = user_data.get("pull_counter", 0)
-    last_five_star_pull = user_data.get("last_five_star_pull", 0)
-
     items_pulled = {"characters": [], "weapons": []}
     for _ in range(number_of_pulls):
-        pull_counter += 1
-        item, item_type = draw_item(CHARACTERS if item_type == "characters" else WEAPONS, pull_counter, last_five_star_pull)
-
-        if item_type == "characters":
-            items_pulled["characters"].append(item)
+        if random.random() < BASE_5_STAR_RATE:
+            item = draw_item({k: v for k, v in CHARACTERS.items() if v == 5})
+            item_type = "characters"
         else:
-            items_pulled["weapons"].append(item)
-        
+            item = draw_item(WEAPONS)
+            item_type = "weapons"
+
+        items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
 
-        if "5-star" in item:
-            last_five_star_pull = pull_counter
-            pull_counter = 0  # Reset counter after getting a 5-star item
-
-    user_data["pull_counter"] = pull_counter
-    user_data["last_five_star_pull"] = last_five_star_pull
     save_genshin_user(user_data)
 
-    characters_str = "\n".join([f"✨ {char}" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
+    # Format the response message with star emojis
+    characters_str = "\n".join([f"⭐ {char}" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
     weapons_str = "\n".join([f"⚔️ {weapon}" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
 
     response = (
@@ -308,8 +300,6 @@ async def pull(update: Update, context: CallbackContext) -> None:
     )
 
     await update.message.reply_text(response, parse_mode='Markdown')
-
-
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
