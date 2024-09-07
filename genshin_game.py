@@ -237,6 +237,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
         return
     
     genshin_user['primos'] -= total_cost
+    
     pulls_since_last_5_star = genshin_user.get('pulls_since_last_5_star', 0)
 
     results = []
@@ -250,33 +251,26 @@ async def pull(update: Update, context: CallbackContext) -> None:
             current_5_star_rate = BASE_5_STAR_RATE
 
         if pulls_since_last_5_star >= HARD_PITY_THRESHOLD:
-            character = random.choice([char for char, stars in CHARACTERS.items() if stars == 5])
+            item = random.choice([char for char, stars in CHARACTERS.items() if stars == 5])
             pulls_since_last_5_star = 0
         else:
             if random.random() <= current_5_star_rate:
-                character = random.choice([char for char, stars in CHARACTERS.items() if stars == 5])
+                item = random.choice([char for char, stars in CHARACTERS.items() if stars == 5])
                 pulls_since_last_5_star = 0
             else:
-                character = random.choice([char for char, stars in CHARACTERS.items() if stars == 4])
+                item = random.choice([char for char, stars in CHARACTERS.items() if stars == 4])
         
-        results.append(character)
+        results.append(item)
 
     genshin_user['pulls_since_last_5_star'] = pulls_since_last_5_star
     
-    # Initialize bag categories if not present
-    genshin_user['bag'] = genshin_user.get('bag', {'characters': {}, 'weapons': {}})
+    genshin_user['bag'] = genshin_user.get('bag', {})
     
     for result in results:
-        if result in CHARACTERS:
-            if result in genshin_user['bag']['characters']:
-                genshin_user['bag']['characters'][result] += 1
-            else:
-                genshin_user['bag']['characters'][result] = 1
-        elif result in WEAPONS:
-            if result in genshin_user['bag']['weapons']:
-                genshin_user['bag']['weapons'][result] += 1
-            else:
-                genshin_user['bag']['weapons'][result] = 1
+        if result in genshin_user['bag']:
+            genshin_user['bag'][result] += 1
+        else:
+            genshin_user['bag'][result] = 1
 
     save_genshin_user(genshin_user)
 
@@ -285,7 +279,6 @@ async def pull(update: Update, context: CallbackContext) -> None:
         f"🎁 **Your Pull Results:**\n{formatted_results}\n\n💎 **Remaining Primogems:** {genshin_user['primos']}\n🔮 **Pulls Since Last 5-Star:** {genshin_user['pulls_since_last_5_star']}",
         parse_mode=ParseMode.MARKDOWN
     )
-
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -295,21 +288,18 @@ async def bag(update: Update, context: CallbackContext) -> None:
         return
 
     bag_message = "🎒 **Your Bag**:\n"
+
+    # Show primos separately
     bag_message += f"💎 **Primos**: {user_data['primos']} ⭐\n\n"
 
-    # Show other items in the bag (characters and weapons)
+    # Show pulled characters and weapons
     if 'bag' in user_data and user_data['bag']:
-        if 'characters' in user_data['bag'] and user_data['bag']['characters']:
-            bag_message += "\n🗃️ **Characters**:\n"
-            for char, count in user_data['bag']['characters'].items():
-                bag_message += f"🔹 {char}: Constellation C{count}\n"
-        
-        if 'weapons' in user_data['bag'] and user_data['bag']['weapons']:
-            bag_message += "\n🗃️ **Weapons**:\n"
-            for weapon, count in user_data['bag']['weapons'].items():
-                bag_message += f"🔹 {weapon}: Refinement R{count}\n"
+        bag_message += "🗃️ **Pulled Items**:\n"
+        for item, count in user_data['bag'].items():
+            bag_message += f"🔹 {item}: {count}\n"
     else:
         bag_message += "🎒 Your bag is empty."
 
     await update.message.reply_text(bag_message, parse_mode="Markdown")
     logger.info(f"User {user_id} viewed their bag")
+
