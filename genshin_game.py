@@ -348,3 +348,20 @@ async def bag(update: Update, context: CallbackContext) -> None:
     )
 
     await update.message.reply_text(response, parse_mode='Markdown')
+
+async def leaderboard(update: Update, context: CallbackContext) -> None:
+    users = get_all_genshin_users()  
+
+    if not users:
+        await update.message.reply_text("🔹 No users found.")
+        return
+
+    sorted_users = sorted(users, key=lambda u: u.get('primos', 0), reverse=True)
+
+    leaderboard_message = "🔹 **Leaderboard:**\n\n"
+    for i, user in enumerate(sorted_users[:10]):  # Show top 10 users
+        username = user.get('username', 'Unknown')  # Adjust if you have usernames or other fields
+        primos = user.get('primos', 0)
+        leaderboard_message += f"{i + 1}. {username} - {primos} primogems\n"
+
+    await update.message.reply_text(leaderboard_message, parse_mode='Markdown')
