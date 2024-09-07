@@ -145,7 +145,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     if existing_genshin_user is None:
         new_genshin_user = {
             "user_id": user_id,
-            "credits": 3200,  # Initial primogems
+            "primos": 3200,  # Initial primogems
             "bag": {}
         }
         save_genshin_user(new_genshin_user)
@@ -160,13 +160,13 @@ async def reward_primos(update: Update, context: CallbackContext) -> None:
         # Create user data if not present
         user_data = {
             "user_id": user_id,
-            "credits": 3200,  # Initial primogems
+            "primos": 3200,  # Initial primogems
             "bag": {}
         }
         save_genshin_user(user_data)
 
     # Increment primos by 5
-    user_data["credits"] += 5
+    user_data["primos"] += 5
     save_genshin_user(user_data)
 
 
