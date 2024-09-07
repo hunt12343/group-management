@@ -366,6 +366,10 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
     # Create the leaderboard message
     leaderboard_message = "🔹 **Leaderboard:**\n\n"
     for idx, user in enumerate(users[:10]):  # Top 10 users
-        leaderboard_message += f"{idx + 1}. User ID: {user['user_id']} - Primogems: {user['primos']}\n"
+        first_name = user.get('first_name', 'Unknown')  # Default to 'Unknown' if no name
+        primogems = user.get('primos', 0)
+        leaderboard_message += (
+            f"{idx + 1}. 🏆 {first_name} - **{primogems}** Primogems\n"
+        )
 
-    await update.message.reply_text(leaderboard_message)
+    await update.message.reply_text(leaderboard_message, parse_mode='Markdown')
