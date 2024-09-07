@@ -246,30 +246,6 @@ async def basketball(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("🏀")  # Send emoji first
         await update.message.reply_text("Miss! You lost 75 credits. 😞")  # Send text message
 
-async def add(update: Update, context: CallbackContext) -> None:
-    if update.effective_user.id != OWNER_ID:
-        await update.message.reply_text("You don't have permission to use this command.")
-        return
-
-    try:
-        user_id = context.args[0]
-        amount = int(context.args[1])
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please use the format: /add <user_id> <amount>")
-        return
-
-    if amount <= 0:
-        await update.message.reply_text("Invalid amount. Please enter a positive number.")
-        return
-
-    user_data = get_user_by_id(user_id)
-
-    if not user_data:
-        await update.message.reply_text(f"User with ID {user_id} does not exist.")
-        return
-
-    update_user_credits(user_id, amount)
-    await update.message.reply_text(f"{amount} credits have been added to user {user_id}'s profile.")
 
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
@@ -283,7 +259,6 @@ def main() -> None:
     application.add_handler(CommandHandler("bet", bet))
     application.add_handler(CommandHandler("dart", dart))
     application.add_handler(CommandHandler("basketball", basketball))
-    application.add_handler(CommandHandler("add", add))
     application.add_handler(CommandHandler("pull", pull))
     application.add_handler(CommandHandler("bag", bag))
     application.add_handler(CommandHandler('add_primos', add_primos))
