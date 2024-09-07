@@ -368,23 +368,19 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
 
     # Send the response
     await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
-async def leaderboard(update: Update, context: CallbackContext) -> None:
-    users = get_all_genshin_users()
     
-    if not users:
-        await update.message.reply_text("❗ No users found.")
-        return
+async def leaderboard(update: Update, context: CallbackContext) -> None:
+    # Fetch all users and sort by primogems
+    users = get_all_genshin_users()
+    sorted_users = sorted(users, key=lambda x: x.get('primos', 0), reverse=True)
 
-    # Sort users by primos in descending order
-    users.sort(key=lambda x: x.get("primos", 0), reverse=True)
+    # Format the leaderboard response
+    leaderboard_str = "🔹 **Leaderboard:**\n\n"
+    for i, user in enumerate(sorted_users[:10], start=1):
+        user_id = user.get("user_id", "Unknown")
+        primogems = user.get("primos", 0)
+        leaderboard_str += f"{i}. 🏆 {user_id} - {primogems} Primogems\n"
 
-    # Create the leaderboard message
-    leaderboard_message = "🔹 **Leaderboard:**\n\n"
-    for idx, user in enumerate(users[:10]):  # Top 10 users
-        first_name = user.get('first_name', 'Unknown')  # Default to 'Unknown' if no name
-        primogems = user.get('primos', 0)
-        leaderboard_message += (
-            f"{idx + 1}. 🏆 {first_name} - **{primogems}** Primogems\n"
-        )
+    # Send the response
+    await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
 
-    await update.message.reply_text(leaderboard_message, parse_mode='Markdown')
