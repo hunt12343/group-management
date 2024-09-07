@@ -6,21 +6,21 @@ import logging
 from datetime import datetime
 
 OWNER_ID = 5667016949
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# MongoDB connection
+
 client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
 db = client['telegram_bot']
 user_collection = db["users"]
 genshin_collection = db["genshin_users"]
 
-# Define the primogem cost
+HARD_PITY_THRESHOLD = 90
+SOFT_PITY_THRESHOLD = 75
 COST_PER_PULL = 160
 COST_PER_10_PULLS = 1600
+BASE_5_STAR_RATE = 0.06
 
-# Comprehensive list of characters with their star ratings
 CHARACTERS = {
     "Diluc": 5, "Jean": 5, "Qiqi": 5, "Venti": 5, "Mona": 5, "Keqing": 5, "Albedo": 5, "Kazuha": 5,
     "Hu Tao": 5, "Ganyu": 5, "Zhongli": 5, "Raiden Shogun": 5, "Ayaka": 5, "Childe": 5, "Eula": 5,
@@ -202,42 +202,65 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 
 async def pull(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-    user_data = get_genshin_user_by_id(user_id)
-
-    if not user_data:
-        await update.message.reply_text("🔹 You need to start the bot first by using /start.")
+    user = update.effective_user
+    user_id = str(user.id)
+    
+    genshin_user = get_genshin_user_by_id(user_id)
+    
+    if genshin_user is None:
+        await update.message.reply_text("You need to start the game first using /start.")
         return
 
-    # Determine number of pulls
-    number_of_pulls = 1
-    if len(context.args) > 0 and context.args[0] == "10":
-        number_of_pulls = 10
+    num_pulls = 1
+    if context.args and context.args[0].isdigit():
+        num_pulls = int(context.args[0])
 
-    # Calculate total cost
-    total_cost = COST_PER_PULL * number_of_pulls
-    if total_cost > user_data["credits"]:
-        await update.message.reply_text("🔺 Insufficient primogems.")
+    total_cost = COST_PER_PULL if num_pulls == 1 else COST_PER_10_PULLS
+    
+    if genshin_user['primos'] < total_cost:
+        await update.message.reply_text(f"You don't have enough primogems for this pull! You need {total_cost} primogems.")
         return
-
-    user_data["credits"] -= total_cost
-
-    # Pull items
-    all_items = {**CHARACTERS, **WEAPONS}
-    results = [draw_item(all_items) for _ in range(number_of_pulls)]
     
-    # Create result message
-    result_message = "🎉 **You pulled the following items:**\n\n"
-    for item in results:
-        item_type = "characters" if item in CHARACTERS else "weapons"
-        update_item(user_data, item, item_type)
-        result_message += f"🔹 {item} - {CHARACTERS.get(item, WEAPONS.get(item))}⭐\n"
-
-    result_message += f"\n💎 You spent {total_cost} Primogems!\n"
+    genshin_user['primos'] -= total_cost
     
-    save_genshin_user(user_data)
-    await update.message.reply_text(result_message, parse_mode="Markdown")
+    pulls_since_last_5_star = genshin_user.get('pulls_since_last_5_star', 0)
 
+    results = []
+    for _ in range(num_pulls):
+        pulls_since_last_5_star += 1
+        
+        if pulls_since_last_5_star >= SOFT_PITY_THRESHOLD:
+            pity_bonus = (pulls_since_last_5_star - SOFT_PITY_THRESHOLD) * 0.06
+            current_5_star_rate = min(BASE_5_STAR_RATE + pity_bonus, 1.0)
+        else:
+            current_5_star_rate = BASE_5_STAR_RATE
+
+        if pulls_since_last_5_star >= HARD_PITY_THRESHOLD:
+            character = random.choice([char for char, stars in CHARACTERS.items() if stars == 5])
+            pulls_since_last_5_star = 0
+        else:
+            if random.random() <= current_5_star_rate:
+                character = random.choice([char for char, stars in CHARACTERS.items() if stars == 5])
+                pulls_since_last_5_star = 0
+            else:
+                character = random.choice([char for char, stars in CHARACTERS.items() if stars == 4])
+        
+        results.append(character)
+
+    genshin_user['pulls_since_last_5_star'] = pulls_since_last_5_star
+    
+    genshin_user['bag'] = genshin_user.get('bag', {})
+    
+    for result in results:
+        if result in genshin_user['bag']:
+            genshin_user['bag'][result] += 1
+        else:
+            genshin_user['bag'][result] = 1
+
+    save_genshin_user(genshin_user)
+
+    pulls_text = "\n".join([f"{char} (Constellation/Refinement: {genshin_user['bag'][char]})" for char in results])
+    await update.message.reply_text(f"Your pulls:\n{pulls_text}\nRemaining primogems: {genshin_user['primos']}\nPulls since last 5-star: {genshin_user['pulls_since_last_5_star']}")
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
