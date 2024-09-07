@@ -201,6 +201,13 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
     save_genshin_user(user_data)
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 
+def format_pull_results(results, bag):
+    formatted_results = []
+    for result in results:
+        refinement_level = bag.get(result, 1)
+        formatted_results.append(f"✨ {result} — C{refinement_level} / R{refinement_level}")
+    return "\n".join(formatted_results)
+
 async def pull(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
@@ -208,7 +215,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
     genshin_user = get_genshin_user_by_id(user_id)
     
     if genshin_user is None:
-        await update.message.reply_text("You need to start the game first using /start.")
+        await update.message.reply_text("⚠️ You need to start the game first using /start.")
         return
 
     num_pulls = 1
@@ -218,7 +225,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
     total_cost = COST_PER_PULL if num_pulls == 1 else COST_PER_10_PULLS
     
     if genshin_user['primos'] < total_cost:
-        await update.message.reply_text(f"You don't have enough primogems for this pull! You need {total_cost} primogems.")
+        await update.message.reply_text(f"❌ You don't have enough primogems for this pull!\nYou need {total_cost} primogems.")
         return
     
     genshin_user['primos'] -= total_cost
@@ -259,8 +266,11 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     save_genshin_user(genshin_user)
 
-    pulls_text = "\n".join([f"{char} (Constellation/Refinement: {genshin_user['bag'][char]})" for char in results])
-    await update.message.reply_text(f"Your pulls:\n{pulls_text}\nRemaining primogems: {genshin_user['primos']}\nPulls since last 5-star: {genshin_user['pulls_since_last_5_star']}")
+    formatted_results = format_pull_results(results, genshin_user['bag'])
+    await update.message.reply_text(
+        f"🎁 **Your Pull Results:**\n{formatted_results}\n\n💎 **Remaining Primogems:** {genshin_user['primos']}\n🔮 **Pulls Since Last 5-Star:** {genshin_user['pulls_since_last_5_star']}",
+        parse_mode=ParseMode.MARKDOWN
+    )
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
@@ -273,7 +283,7 @@ async def bag(update: Update, context: CallbackContext) -> None:
     bag_message = "🎒 **Your Bag**:\n"
 
     # Show primos separately
-    bag_message += f"💎 **Primos**: {user_data['credits']} ⭐\n\n"
+    bag_message += f"💎 **Primos**: {user_data['primos']} ⭐\n\n"
 
     # Show other items in the bag
     if 'bag' in user_data and user_data['bag']:
