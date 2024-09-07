@@ -286,7 +286,7 @@ def main() -> None:
     application.add_handler(CommandHandler("add", add))
     application.add_handler(CommandHandler("pull", pull))
     application.add_handler(CommandHandler("bag", bag))
-    application.add_handler(CommandHandler('add_primo', add_primos))
+    application.add_handler(CommandHandler('add_primos', add_primos))
 
  
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reward_primos))
