@@ -42,7 +42,7 @@ CHARACTERS = {
 WEAPONS = {
     # 5-star weapons
     "Aquila Favonia": 5, "Amos' Bow": 5, "Aqua Simulacra": 5, "Calamity Queller": 5, "Crimson Moon's Semblance": 5,
-    "Elegy for the End": 5, "Engulfing Lightning": 5, "Everlasting Moonglow": 5, "Freedom-Sworn": 5,
+    "Elegy for the End": 5, "Engulfing Lightning": 5, "Everlasting Moonglow": 5, "Freedom-Sword": 5,
     "Haran Geppaku Futsu": 5, "Hunter's Path": 5, "Jadefall's Splendor": 5, "Kagura's Verity": 5,
     "Key of Khaj-Nisut": 5, "Light of Foliar Incision": 5, "Lost Prayer to the Sacred Winds": 5,
     "Lumidouce Elegy": 5, "Memory of Dust": 5, "Mistsplitter Reforged": 5, "Polar Star": 5,
