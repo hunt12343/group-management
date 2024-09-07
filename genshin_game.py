@@ -191,25 +191,30 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
     save_genshin_user(user_data)
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 
+
+
+# Draw an item based on current pull count and 5-star/4-star logic
 def draw_item(items, pull_counter, last_five_star_pull):
-    # Check if a guaranteed 4-star should be given
+    # If the user has pulled 10 times without a 4-star, guarantee a 4-star item
     if pull_counter % PULL_THRESHOLD == 0:
         item = draw_4_star_item(items)
         return item, "characters" if "character" in item else "weapons"
 
-    # Adjust 5-star chance based on the number of pulls
-    if pull_counter >= HIGH_PULL_THRESHOLD:
+    # Increase the 5-star rate after 70 pulls without a 5-star
+    if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD:
         five_star_chance = HIGH_5_STAR_RATE
     else:
         five_star_chance = BASE_5_STAR_RATE
 
+    # Check for a 5-star pull
     if random.random() < five_star_chance:
         item = draw_5_star_item(items)
         return item, "characters" if "character" in item else "weapons"
 
-    # If no 5-star or guaranteed 4-star, draw a 3-star item
+    # Otherwise, draw either a 4-star or 3-star item
     return draw_3_star_item(items), "weapons"
 
+# Helper functions to draw items based on star rating
 def draw_5_star_item(items):
     five_star_items = {k: v for k, v in items.items() if v == 5}
     return random.choice(list(five_star_items.keys()))
@@ -221,6 +226,7 @@ def draw_4_star_item(items):
 def draw_3_star_item(items):
     three_star_items = {k: v for k, v in items.items() if v == 3}
     return random.choice(list(three_star_items.keys()))
+    
 
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
@@ -249,6 +255,10 @@ def update_item(user_data, item, item_type):
                 user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
 
 
+
+# Assuming you already have functions to get and save user data
+# Example: get_genshin_user_by_id, save_genshin_user, update_item
+
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -272,25 +282,33 @@ async def pull(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❗ You do not have enough primogems. Needed: {total_cost}")
         return
 
+    # Deduct primogems
     user_data["primos"] -= total_cost
+    pull_counter = user_data.get('pull_counter', 0)
+    last_five_star_pull = user_data.get('last_five_star_pull', 0)
 
     items_pulled = {"characters": [], "weapons": []}
+    
     for _ in range(number_of_pulls):
-        if random.random() < BASE_5_STAR_RATE:
-            item = draw_item({k: v for k, v in CHARACTERS.items() if v == 5})
-            item_type = "characters"
-        else:
-            item = draw_item(WEAPONS)
-            item_type = "weapons"
-
+        item, item_type = draw_item(WEAPONS, pull_counter, last_five_star_pull)  # Pass correct arguments
         items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
+        
+        # Increment counters
+        pull_counter += 1
 
+        # Reset last_five_star_pull if a 5-star is pulled
+        if item_type == "characters" and item in CHARACTERS and CHARACTERS[item] == 5:
+            last_five_star_pull = pull_counter
+
+    # Save user data after pulls
+    user_data['pull_counter'] = pull_counter
+    user_data['last_five_star_pull'] = last_five_star_pull
     save_genshin_user(user_data)
 
-    # Format the response message with star emojis
-    characters_str = "\n".join([f"⭐ {char}" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
-    weapons_str = "\n".join([f"⚔️ {weapon}" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
+    # Format the response message
+    characters_str = "\n".join([f"✨ {char} ({CHARACTERS[char]}★)" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
+    weapons_str = "\n".join([f"⚔️ {weapon} ({WEAPONS[weapon]}★)" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
 
     response = (
         "🔹 **Pull Results:**\n\n"
@@ -300,6 +318,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
     )
 
     await update.message.reply_text(response, parse_mode='Markdown')
+    
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
