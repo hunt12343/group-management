@@ -292,43 +292,42 @@ async def pull(update: Update, context: CallbackContext) -> None:
         return
 
     total_cost = number_of_pulls * COST_PER_PULL
-    if user_data["primos"] < total_cost:
-        await update.message.reply_text(f"❗ You do not have enough primogems. Needed: {total_cost}")
+       if user_data["primos"] < total_cost:
+        await update.message.reply_text("❗ You don't have enough primogems to perform this pull.")
         return
 
-    # Deduct primogems
     user_data["primos"] -= total_cost
+    save_genshin_user(user_data)
 
-    # Initialize pull counter and last five-star pull
+    # Initialize counters
     pull_counter = user_data.get("pull_counter", 0)
     last_five_star_pull = user_data.get("last_five_star_pull", 0)
-
-    # Update pull counter
-    pull_counter += number_of_pulls
-    user_data["pull_counter"] = pull_counter
-
+    featured_items = {}  # If you have featured items, update this dictionary accordingly
+    
+    # Perform pulls
     results = []
     for _ in range(number_of_pulls):
-        # Determine item type dynamically
-        item_type = "characters" if random.choice([True, False]) else "weapons"
-        items = CHARACTERS if item_type == "characters" else WEAPONS
+        pull_counter += 1
+        item, item_type = draw_item(CHARACTERS if item_type == "characters" else WEAPONS, pull_counter, last_five_star_pull, featured_items)
+        
+        if item_type == "characters":
+            item_category = "characters"
+        else:
+            item_category = "weapons"
 
-        item, item_type = draw_item(items, pull_counter, last_five_star_pull, CHARACTERS if item_type == "characters" else WEAPONS)
-        update_item(user_data, item, item_type)
-        results.append(f"{item_type.capitalize()}: {item}")
+        update_item(user_data, item, item_category)
+        results.append(f"Pulled: {item} ({item_category})")
 
+        # Update pity counters
         if item_type == "characters" and CHARACTERS[item] == 5:
             last_five_star_pull = pull_counter
-        elif item_type == "weapons" and WEAPONS[item] == 5:
-            last_five_star_pull = pull_counter
 
+    user_data["pull_counter"] = pull_counter
     user_data["last_five_star_pull"] = last_five_star_pull
     save_genshin_user(user_data)
 
-    result_message = "\n".join(results)
-    await update.message.reply_text(f"🎉 Pull Results:\n{result_message}\n\nYou now have {user_data['primos']} primogems left.")
-
-
+    # Send results
+    await update.message.reply_text("\n".join(results) + f"\n\nYou now have {user_data['primos']} primogems left.")
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
