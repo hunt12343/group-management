@@ -194,38 +194,56 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
 
 
 # Draw an item based on current pull count and 5-star/4-star logic
-def draw_item(items, pull_counter, last_five_star_pull):
-    # If the user has pulled 10 times without a 4-star, guarantee a 4-star item
-    if pull_counter % PULL_THRESHOLD == 0:
-        item = draw_4_star_item(items)
+def draw_item(items, pull_counter, last_five_star_pull, featured_items):
+    # Soft and Hard Pity thresholds
+    hard_pity_threshold = 90
+    four_star_pity_threshold = 10
+
+    # Check for guaranteed 4-star after 9 pulls without one
+    if pull_counter % four_star_pity_threshold == 9:
+        item = draw_4_star_item(items, featured_items)
         return item, "characters" if "character" in item else "weapons"
 
-    # Increase the 5-star rate after 70 pulls without a 5-star
-    if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD:
+    # Check if user has reached the soft or hard pity for a 5-star
+    if pull_counter - last_five_star_pull >= hard_pity_threshold - 10:  # Soft pity range starts after 80 pulls
         five_star_chance = HIGH_5_STAR_RATE
     else:
         five_star_chance = BASE_5_STAR_RATE
 
-    # Check for a 5-star pull
+    # Determine if user pulls a 5-star
     if random.random() < five_star_chance:
-        item = draw_5_star_item(items)
+        item = draw_5_star_item(items, featured_items)
         return item, "characters" if "character" in item else "weapons"
 
-    # Otherwise, draw either a 4-star or 3-star item
+    # If no 5-star, decide between 3-star or 4-star item
+    if random.random() < BASE_4_STAR_RATE:
+        item = draw_4_star_item(items, featured_items)
+        return item, "characters" if "character" in item else "weapons"
+
+    # Default to a 3-star item
     return draw_3_star_item(items), "weapons"
 
-# Helper functions to draw items based on star rating
-def draw_5_star_item(items):
+# Updated helper functions with 50/50 system
+
+def draw_5_star_item(items, featured_items):
     five_star_items = {k: v for k, v in items.items() if v == 5}
+    # 50% chance for a featured item
+    if random.random() < 0.5:
+        five_star_items.update({k: v for k, v in featured_items.items() if v == 5})
     return random.choice(list(five_star_items.keys()))
 
-def draw_4_star_item(items):
+def draw_4_star_item(items, featured_items):
     four_star_items = {k: v for k, v in items.items() if v == 4}
+    # 50% chance for a featured item
+    if random.random() < 0.5:
+        four_star_items.update({k: v for k, v in featured_items.items() if v == 4})
     return random.choice(list(four_star_items.keys()))
 
 def draw_3_star_item(items):
     three_star_items = {k: v for k, v in items.items() if v == 3}
     return random.choice(list(three_star_items.keys()))
+
+
     
 
 def update_item(user_data, item, item_type):
