@@ -308,7 +308,11 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     results = []
     for _ in range(number_of_pulls):
-        item, item_type = draw_item(CHARACTERS if item_type == "characters" else WEAPONS, pull_counter, last_five_star_pull, CHARACTERS if item_type == "characters" else WEAPONS)
+        # Determine item type dynamically
+        item_type = "characters" if random.choice([True, False]) else "weapons"
+        items = CHARACTERS if item_type == "characters" else WEAPONS
+
+        item, item_type = draw_item(items, pull_counter, last_five_star_pull, CHARACTERS if item_type == "characters" else WEAPONS)
         update_item(user_data, item, item_type)
         results.append(f"{item_type.capitalize()}: {item}")
 
@@ -322,6 +326,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     result_message = "\n".join(results)
     await update.message.reply_text(f"🎉 Pull Results:\n{result_message}\n\nYou now have {user_data['primos']} primogems left.")
+
 
 
 async def bag(update: Update, context: CallbackContext) -> None:
