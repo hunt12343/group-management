@@ -4,18 +4,26 @@ import random
 from pymongo import MongoClient
 import logging
 from datetime import datetime
+
 OWNER_ID = 5667016949
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
 db = client['telegram_bot']
 user_collection = db["users"]
 genshin_collection = db["genshin_users"]
+
+
 BASE_5_STAR_RATE = 0.02  
 HIGH_5_STAR_RATE = 0.60  
 PULL_THRESHOLD = 10      
 HIGH_PULL_THRESHOLD = 70  
 COST_PER_PULL = 160 
+message_counts = {}
+
+
+
 CHARACTERS = {
     # 5-star characters
     "Albedo": 5, "Alhaitham": 5, "Aloy": 5, "Ayaka": 5, "Ayato": 5, "Baizhu": 5, "Cyno": 5, 
@@ -272,25 +280,28 @@ async def bag(update: Update, context: CallbackContext) -> None:
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
+
     primos = user_data.get("primos", 0)
     characters = user_data["bag"].get("characters", {})
     weapons = user_data["bag"].get("weapons", {})
+
     characters_list = [f"✨ {char}: {info}" for char, info in characters.items()]
     weapons_list = [f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]
+
     characters_str = "\n".join(characters_list) if characters_list else "No characters in bag."
     weapons_str = "\n".join(weapons_list) if weapons_list else "No weapons in bag."
+
     response = (
-        "🔹 **Your Bag:**\n\n"
-        f"💎 **Primogems:** {primos}\n\n"
-        "👤 **Characters:**\n"
+        "*🔹 Your Bag:*\n\n"
+        f"💎 *Primogems:* {primos}\n\n"
+        "*👤 Characters:*\n"
         f"{characters_str}\n\n"
-        "⚔️ **Weapons:**\n"
+        "*⚔️ Weapons:*\n"
         f"{weapons_str}"
     )
-    await update.message.reply_text(response, parse_mode='Markdown')
-def get_all_genshin_users():
 
-    return list(genshin_collection.find({}, {"_id": 0, "user_id": 1, "primos": 1}))
+    await update.message.reply_text(response, parse_mode='MarkdownV2')
+
 
 async def leaderboard(update: Update, context: CallbackContext) -> None:
     # Fetch all users and sort by primogems
@@ -309,3 +320,45 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
 async def leaderboard(update: Update, context: CallbackContext) -> None:
     users = get_all_genshin_users()
+
+def send_reward(update, context):
+    chat_id = update.effective_chat.id
+    reward_amount = random.randint(0, 500)
+    
+    # Create the reward message with a "Take" button
+    keyboard = [[InlineKeyboardButton("Take", callback_data=f"take_{reward_amount}")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    context.bot.send_message(
+        chat_id=chat_id,
+        text=f"🎁 You've received a random gift! It contains {reward_amount} primogems.\nClick 'Take' to claim it.",
+        reply_markup=reply_markup
+    )
+
+# Callback function for handling the "Take" button clicks
+def button(update, context):
+    query = update.callback_query
+    query.answer()
+    
+    # Extract the reward amount from the callback data
+    _, reward_amount = query.data.split('_')
+    reward_amount = int(reward_amount)
+    
+    user_id = str(query.from_user.id)
+    user_data = get_genshin_user_by_id(user_id)  # Retrieve user data
+    
+    if user_data:
+        user_data["primos"] += reward_amount
+        save_genshin_user(user_data)  # Save the updated user data
+        
+        query.edit_message_text(text=f"🎉 You have claimed {reward_amount} primogems! Your new balance is {user_data['primos']} primogems.")
+    else:
+        query.edit_message_text(text="❗ You need to start the bot first by using /start.")
+
+# Function to handle new messages and check if it's time to drop a reward
+def handle_message(update, context):
+    chat_id = update.effective_chat.id
+    message_counts[chat_id] = message_counts.get(chat_id, 0) + 1
+    
+    if message_counts[chat_id] % 100 == 0:
+        send_reward(update, context)
