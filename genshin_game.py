@@ -316,7 +316,12 @@ async def pull(update: Update, context: CallbackContext) -> None:
     results = []
     for _ in range(number_of_pulls):
         pull_counter += 1
-        item, item_type = draw_item(CHARACTERS if item_type == "characters" else WEAPONS, pull_counter, last_five_star_pull, featured_items)
+        
+        # Ensure `item_type` is defined
+        item_type = "characters" if random.random() < 0.5 else "weapons"  # Or use another method to determine item_type
+        items = CHARACTERS if item_type == "characters" else WEAPONS
+
+        item, item_type = draw_item(items, pull_counter, last_five_star_pull, featured_items)
         
         if item_type == "characters":
             item_category = "characters"
