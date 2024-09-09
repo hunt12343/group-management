@@ -280,27 +280,25 @@ async def bag(update: Update, context: CallbackContext) -> None:
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
-
     primos = user_data.get("primos", 0)
     characters = user_data["bag"].get("characters", {})
     weapons = user_data["bag"].get("weapons", {})
-
     characters_list = [f"✨ {char}: {info}" for char, info in characters.items()]
     weapons_list = [f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]
-
     characters_str = "\n".join(characters_list) if characters_list else "No characters in bag."
     weapons_str = "\n".join(weapons_list) if weapons_list else "No weapons in bag."
-
     response = (
-        "*🔹 Your Bag:*\n\n"
-        f"💎 *Primogems:* {primos}\n\n"
-        "*👤 Characters:*\n"
+        "🔹 **Your Bag:**\n\n"
+        f"💎 **Primogems:** {primos}\n\n"
+        "👤 **Characters:**\n"
         f"{characters_str}\n\n"
-        "*⚔️ Weapons:*\n"
+        "⚔️ **Weapons:**\n"
         f"{weapons_str}"
     )
+    await update.message.reply_text(response, parse_mode='Markdown')
+def get_all_genshin_users():
 
-    await update.message.reply_text(response, parse_mode='MarkdownV2')
+    return list(genshin_collection.find({}, {"_id": 0, "user_id": 1, "primos": 1}))
 
 
 async def leaderboard(update: Update, context: CallbackContext) -> None:
