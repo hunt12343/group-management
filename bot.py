@@ -4,8 +4,8 @@ import os
 import logging
 from datetime import datetime
 from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext
-from telegram.ext import MessageHandler, filters
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, CallbackQuery
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext, filters
 from token_1 import token
 
 from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, handle_message, send_reward, button
