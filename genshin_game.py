@@ -299,7 +299,8 @@ async def pull(update: Update, context: CallbackContext) -> None:
         return
 
     total_cost = number_of_pulls * COST_PER_PULL
-       if user_data["primos"] < total_cost:
+
+    if user_data["primos"] < total_cost:
         await update.message.reply_text("❗ You don't have enough primogems to perform this pull.")
         return
 
@@ -335,6 +336,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     # Send results
     await update.message.reply_text("\n".join(results) + f"\n\nYou now have {user_data['primos']} primogems left.")
+
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
