@@ -272,11 +272,6 @@ def update_item(user_data, item, item_type):
                 new_level = current_level + 1
                 user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
 
-
-
-# Assuming you already have functions to get and save user data
-# Example: get_genshin_user_by_id, save_genshin_user, update_item
-
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -305,11 +300,19 @@ async def pull(update: Update, context: CallbackContext) -> None:
     pull_counter = user_data.get('pull_counter', 0)
     last_five_star_pull = user_data.get('last_five_star_pull', 0)
 
+    # Example of defining featured items (these are special or promotional items)
+    featured_items = {
+        # Featured 5-star characters and weapons
+        "featured_character": 5,
+        "featured_weapon": 5
+        # Add more as needed
+    }
+
     items_pulled = {"characters": [], "weapons": []}
     
     for _ in range(number_of_pulls):
-        # Merge WEAPONS and CHARACTERS and pass to draw_item
-        item, item_type = draw_item({**WEAPONS, **CHARACTERS}, pull_counter, last_five_star_pull)
+        # Merge WEAPONS and CHARACTERS and pass featured_items to draw_item
+        item, item_type = draw_item({**WEAPONS, **CHARACTERS}, pull_counter, last_five_star_pull, featured_items)
         items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
         
@@ -337,8 +340,6 @@ async def pull(update: Update, context: CallbackContext) -> None:
     )
 
     await update.message.reply_text(response, parse_mode='Markdown')
-
-    
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
