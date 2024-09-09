@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackContext
 from telegram.ext import MessageHandler, filters
 from token_1 import token
 
-from genshin_game import pull, bag, reward_primos, add_primos, leaderboard
+from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, *
 
 # Global variables
 OWNER_ID = 5667016949
@@ -247,11 +247,11 @@ async def basketball(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("Miss! You lost 75 credits. 😞")  # Send text message
 
 
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
-
 def main() -> None:
+    # Create the Application and pass the bot token
     application = Application.builder().token(token).build()
 
+    # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("profile", profile))
     application.add_handler(CommandHandler("roulette", roulette))
@@ -263,12 +263,13 @@ def main() -> None:
     application.add_handler(CommandHandler("bag", bag))
     application.add_handler(CommandHandler('add_primos', add_primos))
     application.add_handler(CommandHandler("leaderboard", leaderboard))
+
+    # Add message handlers
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reward_primos))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    application.run_polling()
-
-if __name__ == "__main__":
-    main()
+    # Add callback query handler for inline buttons
+    application.add_handler(CallbackQueryHandler(button))
 
     application.run_polling()
 
