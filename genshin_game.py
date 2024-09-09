@@ -240,9 +240,16 @@ def draw_4_star_item(items, featured_items):
         four_star_items.update({k: v for k, v in featured_items.items() if v == 4})
     return random.choice(list(four_star_items.keys()))
 
-def draw_3_star_item(items):
-    three_star_items = {k: v for k, v in items.items() if v == 3}
-    return random.choice(list(three_star_items.keys()))
+def draw_3_star_item(three_star_items):
+    # Debugging: Print the keys of the items to check if it's empty
+    print(f"Three star items available: {list(three_star_items.keys())}")
+    
+    items_list = list(three_star_items.keys())
+    if not items_list:
+        raise ValueError("No 3-star items available for selection.")
+
+    return random.choice(items_list)
+
 
 
     
