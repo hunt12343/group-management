@@ -245,13 +245,12 @@ def draw_3_star_item(items):
 
 
     
-
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
         user_data["bag"][item_type] = {}
 
     if item not in user_data["bag"][item_type]:
-        user_data["bag"][item_type][item] = 1
+        user_data["bag"][item_type][item] = "✨ C1" if item_type == "characters" else "⚔️ R1"
     else:
         # Get the current count of the item
         current_count = user_data["bag"][item_type][item]
@@ -271,6 +270,7 @@ def update_item(user_data, item, item_type):
                 current_level = int(current_count.split('R')[1]) if 'R' in current_count else 0
                 new_level = current_level + 1
                 user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
+
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
@@ -297,49 +297,32 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     # Deduct primogems
     user_data["primos"] -= total_cost
-    pull_counter = user_data.get('pull_counter', 0)
-    last_five_star_pull = user_data.get('last_five_star_pull', 0)
 
-    # Example of defining featured items (these are special or promotional items)
-    featured_items = {
-        # Featured 5-star characters and weapons
-        "featured_character": 5,
-        "featured_weapon": 5
-        # Add more as needed
-    }
+    # Initialize pull counter and last five-star pull
+    pull_counter = user_data.get("pull_counter", 0)
+    last_five_star_pull = user_data.get("last_five_star_pull", 0)
 
-    items_pulled = {"characters": [], "weapons": []}
-    
+    # Update pull counter
+    pull_counter += number_of_pulls
+    user_data["pull_counter"] = pull_counter
+
+    results = []
     for _ in range(number_of_pulls):
-        # Merge WEAPONS and CHARACTERS and pass featured_items to draw_item
-        item, item_type = draw_item({**WEAPONS, **CHARACTERS}, pull_counter, last_five_star_pull, featured_items)
-        items_pulled[item_type].append(item)
+        item, item_type = draw_item(CHARACTERS if item_type == "characters" else WEAPONS, pull_counter, last_five_star_pull, CHARACTERS if item_type == "characters" else WEAPONS)
         update_item(user_data, item, item_type)
-        
-        # Increment counters
-        pull_counter += 1
+        results.append(f"{item_type.capitalize()}: {item}")
 
-        # Reset last_five_star_pull if a 5-star is pulled
-        if item_type == "characters" and item in CHARACTERS and CHARACTERS[item] == 5:
+        if item_type == "characters" and CHARACTERS[item] == 5:
+            last_five_star_pull = pull_counter
+        elif item_type == "weapons" and WEAPONS[item] == 5:
             last_five_star_pull = pull_counter
 
-    # Save user data after pulls
-    user_data['pull_counter'] = pull_counter
-    user_data['last_five_star_pull'] = last_five_star_pull
+    user_data["last_five_star_pull"] = last_five_star_pull
     save_genshin_user(user_data)
 
-    # Format the response message
-    characters_str = "\n".join([f"✨ {char} ({CHARACTERS[char]}★)" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
-    weapons_str = "\n".join([f"⚔️ {weapon} ({WEAPONS[weapon]}★)" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
+    result_message = "\n".join(results)
+    await update.message.reply_text(f"🎉 Pull Results:\n{result_message}\n\nYou now have {user_data['primos']} primogems left.")
 
-    response = (
-        "🔹 **Pull Results:**\n\n"
-        f"{characters_str}\n"
-        f"{weapons_str}\n\n"
-        f"💎 **Remaining Primogems:** {user_data['primos']}"
-    )
-
-    await update.message.reply_text(response, parse_mode='Markdown')
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
