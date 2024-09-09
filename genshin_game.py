@@ -308,7 +308,8 @@ async def pull(update: Update, context: CallbackContext) -> None:
     items_pulled = {"characters": [], "weapons": []}
     
     for _ in range(number_of_pulls):
-        item, item_type = draw_item(WEAPONS, pull_counter, last_five_star_pull)  # Pass correct arguments
+        # Merge WEAPONS and CHARACTERS and pass to draw_item
+        item, item_type = draw_item({**WEAPONS, **CHARACTERS}, pull_counter, last_five_star_pull)
         items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
         
@@ -336,6 +337,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
     )
 
     await update.message.reply_text(response, parse_mode='Markdown')
+
     
 
 async def bag(update: Update, context: CallbackContext) -> None:
