@@ -14,8 +14,9 @@ db = client['telegram_bot']
 user_collection = db["users"]
 genshin_collection = db["genshin_users"]
 
-BASE_5_STAR_RATE = 0.02  
-HIGH_5_STAR_RATE = 0.60  
+BASE_5_STAR_RATE = 0.006 
+BASE_4_STAR_RATE = 0.051  
+HIGH_5_STAR_RATE = 0.015  
 PULL_THRESHOLD = 10      
 HIGH_PULL_THRESHOLD = 70  
 COST_PER_PULL = 160 
