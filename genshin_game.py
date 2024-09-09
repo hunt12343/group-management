@@ -4,24 +4,18 @@ import random
 from pymongo import MongoClient
 import logging
 from datetime import datetime
-
 OWNER_ID = 5667016949
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
 db = client['telegram_bot']
 user_collection = db["users"]
 genshin_collection = db["genshin_users"]
-
-BASE_5_STAR_RATE = 0.006 
-BASE_4_STAR_RATE = 0.051  
-HIGH_5_STAR_RATE = 0.015  
+BASE_5_STAR_RATE = 0.02  
+HIGH_5_STAR_RATE = 0.60  
 PULL_THRESHOLD = 10      
 HIGH_PULL_THRESHOLD = 70  
 COST_PER_PULL = 160 
-
-
 CHARACTERS = {
     # 5-star characters
     "Albedo": 5, "Alhaitham": 5, "Aloy": 5, "Ayaka": 5, "Ayato": 5, "Baizhu": 5, "Cyno": 5, 
@@ -29,7 +23,6 @@ CHARACTERS = {
     "Kazuha": 5, "Keqing": 5, "Klee": 5, "Kokomi": 5, "Lyney": 5, "Mona": 5, "Nahida": 5, 
     "Nilou": 5, "Qiqi": 5, "Raiden": 5, "Shenhe": 5, "Tighnari": 5, "Venti": 5, "Wanderer": 5, 
     "Xiao": 5, "Yae Miko": 5, "Yelan": 5, "Yoimiya": 5, "Zhongli": 5,
-
     # 4-star characters
     "Amber": 4, "Barbara": 4, "Beidou": 4, "Bennett": 4, "Candace": 4, "Chongyun": 4, 
     "Collei": 4, "Diona": 4, "Dori": 4, "Fischl": 4, "Gorou": 4, "Heizou": 4, "Kaeya": 4, 
@@ -37,8 +30,6 @@ CHARACTERS = {
     "Rosaria": 4, "Sara": 4, "Sayu": 4, "Sucrose": 4, "Thoma": 4, "Xiangling": 4, 
     "Xingqiu": 4, "Xinyan": 4, "Yanfei": 4, "Yaoyao": 4, "Yun Jin": 4
 }
-
-
 # Comprehensive list of weapons with their star ratings
 WEAPONS = {
     # 5-star weapons
@@ -51,7 +42,6 @@ WEAPONS = {
     "Song of Broken Pines": 5, "Staff of Homa": 5, "Staff of the Scarlet Sands": 5, "Summit Shaper": 5,
     "The First Great Magic": 5, "The Unforged": 5, "Thundering Pulse": 5, "Tome of the Eternal Flow": 5,
     "Tulaytullah's Remembrance": 5, "Uraku Misugiri": 5, "Verdict": 5, "Vortex Vanquisher": 5, "Wolf's Gravestone": 5,
-
     # 4-star weapons
     "Akuoumaru": 4, "Alley Hunter": 4, "Amenoma Kageuchi": 4, "Ballad of the Boundless Blue": 4,
     "Ballad of the Fjords": 4, "Blackcliff Agate": 4, "Blackcliff Longsword": 4, "Blackcliff Pole": 4,
@@ -76,7 +66,6 @@ WEAPONS = {
     "The Widsith": 4, "Tidal Shadow": 4, "Toukabou Shigure": 4, "Ultimate Overlord's Mega Magic Sword": 4,
     "Wandering Evenstar": 4, "Wavebreaker's Fin": 4, "Whiteblind": 4, "Windblume Ode": 4, "Wine and Song": 4,
     "Wolf-Fang": 4, "Xiphos' Moonlight": 4,
-
     # 3-star weapons
     "Black Tassel": 3, "Bloodtainted Greatsword": 3, "Cool Steel": 3, "Dark Iron Sword": 3,
     "Debate Club": 3, "Emerald Orb": 3, "Ferrous Shadow": 3, "Fillet Blade": 3, "Halberd": 3,
@@ -85,27 +74,19 @@ WEAPONS = {
     "Skyrider Sword": 3, "Slingshot": 3, "Thrilling Tales of Dragon Slayers": 3, "Traveler's Handy Sword": 3,
     "Twin Nephrite": 3, "White Iron Greatsword": 3, "White Tassel": 3
 }
-
-
 def get_genshin_user_by_id(user_id):
     return genshin_collection.find_one({"user_id": user_id})
-
-
 def save_genshin_user(user_data):
     genshin_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
-
 # Function to get user data from the general users collection
 def get_user_by_id(user_id):
     return user_collection.find_one({"user_id": user_id})
-
 # Function to save user data to the general users collection
 def save_user(user_data):
     user_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
-
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
-
     # Save in general users collection
     existing_user = get_user_by_id(user_id)
     if existing_user is None:
@@ -133,7 +114,6 @@ async def start(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(
             "You have already started the bot. Use /profile to view your details."
         )
-
     # Save in genshin_users collection
     existing_genshin_user = get_genshin_user_by_id(user_id)
     if existing_genshin_user is None:
@@ -144,7 +124,6 @@ async def start(update: Update, context: CallbackContext) -> None:
         }
         save_genshin_user(new_genshin_user)
         logger.info(f"Genshin user {user_id} initialized.")
-
 async def reward_primos(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -157,108 +136,66 @@ async def reward_primos(update: Update, context: CallbackContext) -> None:
             "bag": {}
         }
         save_genshin_user(user_data)
-
     # Increment primos by 5
     user_data["primos"] += 5
     save_genshin_user(user_data)
-
 async def add_primos(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != OWNER_ID:
         await update.message.reply_text("🔒 You don't have permission to use this command.")
         return
-
     # Ensure proper command format
     if len(context.args) < 2:
         await update.message.reply_text("❗ Usage: /add primo <user_id> <amount>")
         return
-
     user_id = context.args[0]
     try:
         amount = int(context.args[1])
     except ValueError:
         await update.message.reply_text("❗ The amount must be a valid number.")
         return
-
     if amount <= 0:
         await update.message.reply_text("❗ The amount must be a positive number.")
         return
-
     user_data = get_genshin_user_by_id(user_id)
     if not user_data:
         await update.message.reply_text(f"❗ User with ID {user_id} does not exist.")
         return
-
     user_data["primos"] = user_data.get("primos", 0) + amount
     save_genshin_user(user_data)
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
-
-
-
 # Draw an item based on current pull count and 5-star/4-star logic
-def draw_item(items, pull_counter, last_five_star_pull, featured_items):
-    # Soft and Hard Pity thresholds
-    hard_pity_threshold = 90
-    four_star_pity_threshold = 10
-
-    # Check for guaranteed 4-star after 9 pulls without one
-    if pull_counter % four_star_pity_threshold == 9:
-        item = draw_4_star_item(items, featured_items)
+def draw_item(items, pull_counter, last_five_star_pull):
+    # If the user has pulled 10 times without a 4-star, guarantee a 4-star item
+    if pull_counter % PULL_THRESHOLD == 0:
+        item = draw_4_star_item(items)
         return item, "characters" if "character" in item else "weapons"
-
-    # Check if user has reached the soft or hard pity for a 5-star
-    if pull_counter - last_five_star_pull >= hard_pity_threshold - 10:  # Soft pity range starts after 80 pulls
+    # Increase the 5-star rate after 70 pulls without a 5-star
+    if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD:
         five_star_chance = HIGH_5_STAR_RATE
     else:
         five_star_chance = BASE_5_STAR_RATE
-
-    # Determine if user pulls a 5-star
+    # Check for a 5-star pull
     if random.random() < five_star_chance:
-        item = draw_5_star_item(items, featured_items)
+        item = draw_5_star_item(items)
         return item, "characters" if "character" in item else "weapons"
-
-    # If no 5-star, decide between 3-star or 4-star item
-    if random.random() < BASE_4_STAR_RATE:
-        item = draw_4_star_item(items, featured_items)
-        return item, "characters" if "character" in item else "weapons"
-
-    # Default to a 3-star item
+    # Otherwise, draw either a 4-star or 3-star item
     return draw_3_star_item(items), "weapons"
-
-# Updated helper functions with 50/50 system
-
-def draw_5_star_item(items, featured_items):
+# Helper functions to draw items based on star rating
+def draw_5_star_item(items):
     five_star_items = {k: v for k, v in items.items() if v == 5}
-    # 50% chance for a featured item
-    if random.random() < 0.5:
-        five_star_items.update({k: v for k, v in featured_items.items() if v == 5})
     return random.choice(list(five_star_items.keys()))
-
-def draw_4_star_item(items, featured_items):
+def draw_4_star_item(items):
     four_star_items = {k: v for k, v in items.items() if v == 4}
-    # 50% chance for a featured item
-    if random.random() < 0.5:
-        four_star_items.update({k: v for k, v in featured_items.items() if v == 4})
     return random.choice(list(four_star_items.keys()))
-
-def draw_3_star_item(three_star_items):
-    # Debugging: Print the keys of the items to check if it's empty
-    print(f"Three star items available: {list(three_star_items.keys())}")
-    
-    items_list = list(three_star_items.keys())
-    if not items_list:
-        raise ValueError("No 3-star items available for selection.")
-
-    return random.choice(items_list)
-
-
-
+def draw_3_star_item(items):
+    three_star_items = {k: v for k, v in items.items() if v == 3}
+    return random.choice(list(three_star_items.keys()))
     
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
         user_data["bag"][item_type] = {}
-
     if item not in user_data["bag"][item_type]:
-        user_data["bag"][item_type][item] = "✨ C1" if item_type == "characters" else "⚔️ R1"
+        user_data["bag"][item_type][item] = 1
     else:
         # Get the current count of the item
         current_count = user_data["bag"][item_type][item]
@@ -278,89 +215,70 @@ def update_item(user_data, item, item_type):
                 current_level = int(current_count.split('R')[1]) if 'R' in current_count else 0
                 new_level = current_level + 1
                 user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
-
-
+# Assuming you already have functions to get and save user data
+# Example: get_genshin_user_by_id, save_genshin_user, update_item
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
-
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
-
     try:
         number_of_pulls = int(context.args[0])
     except (IndexError, ValueError):
         await update.message.reply_text("❗ Usage: /pull <number> (1-10)")
         return
-
     if number_of_pulls < 1 or number_of_pulls > 10:
         await update.message.reply_text("❗ Please specify a number between 1 and 10.")
         return
-
     total_cost = number_of_pulls * COST_PER_PULL
-
     if user_data["primos"] < total_cost:
-        await update.message.reply_text("❗ You don't have enough primogems to perform this pull.")
+        await update.message.reply_text(f"❗ You do not have enough primogems. Needed: {total_cost}")
         return
-
+    # Deduct primogems
     user_data["primos"] -= total_cost
-    save_genshin_user(user_data)
-
-    # Initialize counters
-    pull_counter = user_data.get("pull_counter", 0)
-    last_five_star_pull = user_data.get("last_five_star_pull", 0)
-    featured_items = {}  # If you have featured items, update this dictionary accordingly
+    pull_counter = user_data.get('pull_counter', 0)
+    last_five_star_pull = user_data.get('last_five_star_pull', 0)
+    items_pulled = {"characters": [], "weapons": []}
     
-    # Perform pulls
-    results = []
     for _ in range(number_of_pulls):
+        item, item_type = draw_item(WEAPONS, pull_counter, last_five_star_pull)  # Pass correct arguments
+        items_pulled[item_type].append(item)
+        update_item(user_data, item, item_type)
+        
+        # Increment counters
         pull_counter += 1
-        
-        # Ensure `item_type` is defined
-        item_type = "characters" if random.random() < 0.5 else "weapons"  # Or use another method to determine item_type
-        items = CHARACTERS if item_type == "characters" else WEAPONS
-
-        item, item_type = draw_item(items, pull_counter, last_five_star_pull, featured_items)
-        
-        if item_type == "characters":
-            item_category = "characters"
-        else:
-            item_category = "weapons"
-
-        update_item(user_data, item, item_category)
-        results.append(f"Pulled: {item} ({item_category})")
-
-        # Update pity counters
-        if item_type == "characters" and CHARACTERS[item] == 5:
+        # Reset last_five_star_pull if a 5-star is pulled
+        if item_type == "characters" and item in CHARACTERS and CHARACTERS[item] == 5:
             last_five_star_pull = pull_counter
-
-    user_data["pull_counter"] = pull_counter
-    user_data["last_five_star_pull"] = last_five_star_pull
+    # Save user data after pulls
+    user_data['pull_counter'] = pull_counter
+    user_data['last_five_star_pull'] = last_five_star_pull
     save_genshin_user(user_data)
-
-    # Send results
-    await update.message.reply_text("\n".join(results) + f"\n\nYou now have {user_data['primos']} primogems left.")
-
-
+    # Format the response message
+    characters_str = "\n".join([f"✨ {char} ({CHARACTERS[char]}★)" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
+    weapons_str = "\n".join([f"⚔️ {weapon} ({WEAPONS[weapon]}★)" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
+    response = (
+        "🔹 **Pull Results:**\n\n"
+        f"{characters_str}\n"
+        f"{weapons_str}\n\n"
+        f"💎 **Remaining Primogems:** {user_data['primos']}"
+    )
+    await update.message.reply_text(response, parse_mode='Markdown')
+    
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
-
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
-
     primos = user_data.get("primos", 0)
     characters = user_data["bag"].get("characters", {})
     weapons = user_data["bag"].get("weapons", {})
-
     characters_list = [f"✨ {char}: {info}" for char, info in characters.items()]
     weapons_list = [f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]
-
     characters_str = "\n".join(characters_list) if characters_list else "No characters in bag."
     weapons_str = "\n".join(weapons_list) if weapons_list else "No weapons in bag."
-
     response = (
         "🔹 **Your Bag:**\n\n"
         f"💎 **Primogems:** {primos}\n\n"
@@ -369,9 +287,7 @@ async def bag(update: Update, context: CallbackContext) -> None:
         "⚔️ **Weapons:**\n"
         f"{weapons_str}"
     )
-
     await update.message.reply_text(response, parse_mode='Markdown')
-
 def get_all_genshin_users():
 
     return list(genshin_collection.find({}, {"_id": 0, "user_id": 1, "primos": 1}))
@@ -391,19 +307,5 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
 
     # Send the response
     await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
-    
 async def leaderboard(update: Update, context: CallbackContext) -> None:
-    # Fetch all users and sort by primogems
     users = get_all_genshin_users()
-    sorted_users = sorted(users, key=lambda x: x.get('primos', 0), reverse=True)
-
-    # Format the leaderboard response
-    leaderboard_str = "🔹 **Leaderboard:**\n\n"
-    for i, user in enumerate(sorted_users[:10], start=1):
-        user_id = user.get("user_id", "Unknown")
-        primogems = user.get("primos", 0)
-        leaderboard_str += f"{i}. 🏆 {user_id} - {primogems} Primogems\n"
-
-    # Send the response
-    await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
-
