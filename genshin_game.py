@@ -118,6 +118,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     if existing_genshin_user is None:
         new_genshin_user = {
             "user_id": user_id,
+            "first_name": first_name,
             "primos": 16000,  # Initial primogems
             "bag": {}
         }
@@ -131,6 +132,7 @@ async def reward_primos(update: Update, context: CallbackContext) -> None:
         # Create user data if not present
         user_data = {
             "user_id": user_id,
+            "first_name": first_name, 
             "primos": 16000,  # Initial primogems
             "bag": {}
         }
