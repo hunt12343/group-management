@@ -131,7 +131,7 @@ async def reward_primos(update: Update, context: CallbackContext) -> None:
         # Create user data if not present
         user_data = {
             "user_id": user_id,
-            "primos": 3200,  # Initial primogems
+            "primos": 16000,  # Initial primogems
             "bag": {}
         }
         save_genshin_user(user_data)
