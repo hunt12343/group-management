@@ -171,6 +171,12 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
 # Draw an item based on current pull count and 5-star/4-star logic
 import random
 
+import random
+
+BASE_5_STAR_RATE = 0.006  # Base chance for a 5-star item
+GUARANTEED_5_STAR_PITY = 90  # Pulls needed for guaranteed 5-star
+PULL_THRESHOLD = 10  # Pulls needed for guaranteed 4-star
+
 def draw_item(characters, weapons, pull_counter, last_five_star_pull):
     # Check if we are due for a guaranteed 5-star item
     if pull_counter >= GUARANTEED_5_STAR_PITY:
@@ -182,8 +188,8 @@ def draw_item(characters, weapons, pull_counter, last_five_star_pull):
         return draw_4_star_item(characters, weapons), "characters" if item in characters else "weapons"
 
     # Determine 5-star rate depending on pulls
-    if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD:
-        five_star_chance = 0.90
+    if pull_counter - last_five_star_pull >= GUARANTEED_5_STAR_PITY:
+        five_star_chance = 1.0
     else:
         five_star_chance = BASE_5_STAR_RATE
 
@@ -194,10 +200,13 @@ def draw_item(characters, weapons, pull_counter, last_five_star_pull):
 
     # Draw a 4-star item if not a 5-star item
     if pull_counter % PULL_THRESHOLD == 0:
-        return draw_4_star_item(characters, weapons), "characters" if item in characters else "weapons"
+        item = draw_4_star_item(characters, weapons)
+        return item, "characters" if item in characters else "weapons"
     
     # Otherwise, draw a 3-star item
-    return draw_3_star_item(characters, weapons), "characters" if item in characters else "weapons"
+    item = draw_3_star_item(characters, weapons)
+    return item, "characters" if item in characters else "weapons"
+
 
 def draw_5_star_item(characters, weapons):
     five_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 5}.keys())
@@ -340,21 +349,27 @@ async def button(update: Update, context: CallbackContext) -> None:
         characters = user_data["bag"].get("characters", {})
         characters_str = "\n".join([f"✨ {char}: {info}" for char, info in characters.items()]) if characters else "No characters in bag."
         response = f"👤 **Characters:**\n{characters_str}"
+        keyboard = [
+            [InlineKeyboardButton("Weapons", callback_data="show_weapons")],
+            [InlineKeyboardButton("Back", callback_data="back")]
+        ]
     elif query.data == "show_weapons":
         weapons = user_data["bag"].get("weapons", {})
         weapons_str = "\n".join([f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]) if weapons else "No weapons in bag."
         response = f"⚔️ **Weapons:**\n{weapons_str}"
+        keyboard = [
+            [InlineKeyboardButton("Characters", callback_data="show_characters")],
+            [InlineKeyboardButton("Back", callback_data="back")]
+        ]
     elif query.data == "back":
         await bag(update, context)
         return
     else:
         return
 
-    # Edit the message with the new content
-    await query.edit_message_text(response, parse_mode='Markdown')
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(response, parse_mode='Markdown', reply_markup=reply_markup)
 
-
-    
 async def leaderboard(update: Update, context: CallbackContext) -> None:
     users = get_all_genshin_users()
     sorted_users = sorted(users, key=lambda x: x.get('primos', 0), reverse=True)
@@ -364,6 +379,9 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
         primogems = user.get("primos", 0)
         leaderboard_str += f"{i}. 🏆 {first_name} - {primogems} Primogems\n"
     await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
+
+def get_all_genshin_users():
+    return []
 
 def handle_message(update, context):
     chat_id = update.effective_chat.id
