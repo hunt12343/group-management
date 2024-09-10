@@ -8,7 +8,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, Callbac
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext, filters
 from token_1 import token
 
-from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, handle_message, send_reward, button, reset_bag_data, drop_primos
+from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, handle_message, button, reset_bag_data, drop_primos
 # Global variables
 OWNER_ID = 5667016949
 
