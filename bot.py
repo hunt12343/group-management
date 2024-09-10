@@ -39,6 +39,7 @@ def save_genshin_user(user_data):
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
+    first_name = user.first_name  # Get user's first name
 
     # Save in general users collection
     existing_user = get_user_by_id(user_id)
@@ -46,6 +47,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     if existing_user is None:
         new_user = {
             "user_id": user_id,
+            "first_name": first_name,  # Save the first name
             "join_date": datetime.now().strftime('%m/%d/%y'),
             "credits": 5000,
             "daily": None,
@@ -59,15 +61,15 @@ async def start(update: Update, context: CallbackContext) -> None:
             "bag": {}
         }
         save_user(new_user)
-        logger.info(f"User {user_id} started the bot.")
+        logger.info(f"User {user_id} started the bot with first name: {first_name}.")
 
         await update.message.reply_text(
-            "Welcome! You've received 5000 credits to start betting. Use /profile to check your details."
+            f"Welcome {first_name}! You've received 5000 credits to start betting. Use /profile to check your details."
         )
     else:
-        logger.info(f"User {user_id} already exists.")
+        logger.info(f"User {user_id} ({first_name}) already exists.")
         await update.message.reply_text(
-            "You have already started the bot. Use /profile to view your details."
+            f"Welcome back, {first_name}! Use /profile to view your details."
         )
 
     # Save in genshin_users collection
@@ -76,11 +78,15 @@ async def start(update: Update, context: CallbackContext) -> None:
     if existing_genshin_user is None:
         new_genshin_user = {
             "user_id": user_id,
+            "first_name": first_name,  # Save the first name in Genshin users
             "primos": 3200,  # Adjust initial primogems as needed
             "bag": {}
         }
         save_genshin_user(new_genshin_user)
-        logger.info(f"Genshin user {user_id} initialized.")
+        logger.info(f"Genshin user {user_id} initialized with first name: {first_name}.")
+    else:
+        logger.info(f"Genshin user {user_id} ({first_name}) already exists.")
+
 
 async def profile(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
