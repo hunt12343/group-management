@@ -352,13 +352,47 @@ async def button(update: Update, context: CallbackContext) -> None:
             [InlineKeyboardButton("Back", callback_data="back")]
         ]
     elif query.data == "back":
-        await bag(update, context)
+        # Correctly handle the "Back" button by using the existing `query` to update the message
+        primos = user_data.get("primos", 0)
+        characters = user_data["bag"].get("characters", {})
+        weapons = user_data["bag"].get("weapons", {})
+
+        total_characters = sum(1 for _ in characters)
+        total_weapons = sum(1 for _ in weapons)
+
+        characters_str = "\n".join([f"✨ {char}: {info}" for char, info in characters.items()]) if characters else "No characters in bag."
+        weapons_str = "\n".join([f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]) if weapons else "No weapons in bag."
+
+        keyboard = [
+            [InlineKeyboardButton("Characters", callback_data="show_characters"),
+             InlineKeyboardButton("Weapons", callback_data="show_weapons")],
+            [InlineKeyboardButton("Back", callback_data="back")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        response = (
+            "🔹 **Your Bag:**\n\n"
+            f"💎 **Primogems:** {primos}\n\n"
+            f"👤 **Total Characters:** {total_characters}\n"
+            f"⚔️ **Total Weapons:** {total_weapons}"
+        )
+
+        await query.edit_message_text(response, reply_markup=reply_markup, parse_mode='Markdown')
         return
     else:
         return
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(response, parse_mode='Markdown', reply_markup=reply_markup)
+
+def get_all_genshin_users():
+    # Assuming `users` and `genshin_users` are dictionaries that can be merged
+    all_users = []
+    for user_id, user_info in users.items():
+        primos = genshin_users.get(user_id, {}).get('primos', 0)
+        first_name = user_info.get('first_name', 'Unknown')
+        all_users.append({'first_name': first_name, 'primos': primos})
+    return all_users
 
 async def leaderboard(update: Update, context: CallbackContext) -> None:
     users = get_all_genshin_users()
@@ -370,8 +404,7 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
         leaderboard_str += f"{i}. 🏆 {first_name} - {primogems} Primogems\n"
     await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
 
-def get_all_genshin_users():
-    return users_db  # Replace with actual database retrieval logic
+
 
 
 def handle_message(update, context):
