@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from telegram.ext import CallbackContext
 import random
 from pymongo import MongoClient
@@ -271,8 +271,6 @@ async def pull(update: Update, context: CallbackContext) -> None:
         f"💎 **Remaining Primogems:** {user_data['primos']}"
     )
     await update.message.reply_text(response, parse_mode='Markdown')
-
-# Improved Bag with Pagination Logic
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -284,17 +282,17 @@ async def bag(update: Update, context: CallbackContext) -> None:
     characters = user_data["bag"].get("characters", {})
     weapons = user_data["bag"].get("weapons", {})
 
-    # Split into pages for better user experience
-    characters_list = [f"✨ {char}: {info}" for char, info in characters.items()]
-    weapons_list = [f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]
+    # Total counts
+    total_characters = sum(1 for _ in characters)
+    total_weapons = sum(1 for _ in weapons)
 
-    characters_str = "\n".join(characters_list) if characters_list else "No characters in bag."
-    weapons_str = "\n".join(weapons_list) if weapons_list else "No weapons in bag."
+    # Generate the text for characters and weapons
+    characters_str = "\n".join([f"✨ {char}: {info}" for char, info in characters.items()]) if characters else "No characters in bag."
+    weapons_str = "\n".join([f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]) if weapons else "No weapons in bag."
 
-    # Inline buttons to toggle between characters and weapons
     keyboard = [
-        [InlineKeyboardButton("Characters", callback_data="characters"),
-         InlineKeyboardButton("Weapons", callback_data="weapons")],
+        [InlineKeyboardButton("Characters", callback_data="show_characters"),
+         InlineKeyboardButton("Weapons", callback_data="show_weapons")],
         [InlineKeyboardButton("Back", callback_data="back")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -302,11 +300,12 @@ async def bag(update: Update, context: CallbackContext) -> None:
     response = (
         "🔹 **Your Bag:**\n\n"
         f"💎 **Primogems:** {primos}\n\n"
-        f"👤 **Characters:**\n{characters_str}\n\n"
-        f"⚔️ **Weapons:**\n{weapons_str}"
+        f"👤 **Total Characters:** {total_characters}\n"
+        f"⚔️ **Total Weapons:** {total_weapons}"
     )
-    await update.message.reply_text(response, reply_markup=reply_markup, parse_mode='Markdown')
 
+    await update.message.reply_text(response, reply_markup=reply_markup, parse_mode='Markdown')
+    
 async def leaderboard(update: Update, context: CallbackContext) -> None:
     users = get_all_genshin_users()
     sorted_users = sorted(users, key=lambda x: x.get('primos', 0), reverse=True)
@@ -317,30 +316,32 @@ async def leaderboard(update: Update, context: CallbackContext) -> None:
         leaderboard_str += f"{i}. 🏆 {first_name} - {primogems} Primogems\n"
     await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
 
-def send_reward(update, context):
-    chat_id = update.effective_chat.id
-    reward_amount = random.randint(0, 500)
-    keyboard = [[InlineKeyboardButton("Take", callback_data=f"take_{reward_amount}")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(
-        chat_id=chat_id,
-        text=f"🎁 You've received a random gift! It contains {reward_amount} primogems.\nClick 'Take' to claim it.",
-        reply_markup=reply_markup
-    )
-
-def button(update, context):
+async def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
-    _, reward_amount = query.data.split('_')
-    reward_amount = int(reward_amount)
+
     user_id = str(query.from_user.id)
     user_data = get_genshin_user_by_id(user_id)
-    if user_data:
-        user_data["primos"] += reward_amount
-        save_genshin_user(user_data)
-        query.edit_message_text(text=f"🎉 You have claimed {reward_amount} primogems! Your new balance is {user_data['primos']} primogems.")
+    if not user_data:
+        await query.edit_message_text("❗ You need to start the bot first by using /start.")
+        return
+
+    if query.data == "show_characters":
+        characters = user_data["bag"].get("characters", {})
+        characters_str = "\n".join([f"✨ {char}: {info}" for char, info in characters.items()]) if characters else "No characters in bag."
+        response = f"👤 **Characters:**\n{characters_str}"
+    elif query.data == "show_weapons":
+        weapons = user_data["bag"].get("weapons", {})
+        weapons_str = "\n".join([f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]) if weapons else "No weapons in bag."
+        response = f"⚔️ **Weapons:**\n{weapons_str}"
+    elif query.data == "back":
+        await bag(update, context)
+        return
     else:
-        query.edit_message_text(text="❗ You need to start the bot first by using /start.")
+        return
+
+    # Edit the message with the new content
+    await query.edit_message_text(response, parse_mode='Markdown')
 
 def handle_message(update, context):
     chat_id = update.effective_chat.id
