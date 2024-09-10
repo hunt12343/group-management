@@ -393,26 +393,31 @@ async def button(update: Update, context: CallbackContext) -> None:
     await query.edit_message_text(response, parse_mode='Markdown', reply_markup=reply_markup)
 
 def get_all_genshin_users():
-    # Assuming `users` and `genshin_users` are dictionaries that can be merged
-    all_users = []
-    for user_id, user_info in users.items():
-        primos = genshin_users.get(user_id, {}).get('primos', 0)
-        first_name = user_info.get('first_name', 'Unknown')
-        all_users.append({'first_name': first_name, 'primos': primos})
-    return all_users
+    """
+    Retrieve all Genshin users from the MongoDB collection.
+    """
+    return list(genshin_collection.find({}, {"_id": 0, "user_id": 1, "primos": 1, "first_name": 1}))
 
 async def leaderboard(update: Update, context: CallbackContext) -> None:
     users = get_all_genshin_users()
-    sorted_users = sorted(users, key=lambda x: x.get('primos', 0), reverse=True)
-    leaderboard_str = "🔹 **Leaderboard:**\n\n"
-    for i, user in enumerate(sorted_users[:10], start=1):
-        first_name = user.get("first_name", "Unknown")
-        primogems = user.get("primos", 0)
-        leaderboard_str += f"{i}. 🏆 {first_name} - {primogems} Primogems\n"
-    await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
+    
+    if not users:
+        await update.message.reply_text("❗ No users found.")
+        return
 
+    # Sort users by primos in descending order
+    users.sort(key=lambda x: x.get("primos", 0), reverse=True)
 
+    # Create the leaderboard message
+    leaderboard_message = "🔹 **Leaderboard:**\n\n"
+    for idx, user in enumerate(users[:10]):  # Top 10 users
+        first_name = user.get('first_name', 'Unknown')  # Default to 'Unknown' if no name
+        primogems = user.get('primos', 0)
+        leaderboard_message += (
+            f"{idx + 1}. 🏆 {first_name} - **{primogems}** Primogems\n"
+        )
 
+    await update.message.reply_text(leaderboard_message, parse_mode='Markdown')
 
 def handle_message(update, context):
     chat_id = update.effective_chat.id
