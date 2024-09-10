@@ -169,37 +169,38 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
     save_genshin_user(user_data)
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 # Draw an item based on current pull count and 5-star/4-star logic
-def draw_item(items, pull_counter, last_five_star_pull):
+import random
+
+def draw_item(characters, weapons, pull_counter, last_five_star_pull):
+    # Guarantee 5-star item after pity
     if pull_counter >= GUARANTEED_5_STAR_PITY:
-        item = draw_5_star_item(items)
-        return item, "characters" if "character" in item else "weapons"
+        item = draw_5_star_item(characters, weapons)
+        return item, "characters" if item in characters else "weapons"
     
     if pull_counter % PULL_THRESHOLD == 0:
-        return draw_4_star_item(items), "weapons"
-    
-    if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD:
-        five_star_chance = HIGH_5_STAR_RATE
-    else:
-        five_star_chance = BASE_5_STAR_RATE
+        return draw_4_star_item(characters, weapons), "weapons"  # Can tweak this logic
+
+    # Determine 5-star rate depending on pulls
+    five_star_chance = HIGH_5_STAR_RATE if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD else BASE_5_STAR_RATE
 
     if random.random() < five_star_chance:
-        return draw_5_star_item(items), "characters" if "character" in item else "weapons"
+        return draw_5_star_item(characters, weapons), "characters" if item in characters else "weapons"
+    
+    return draw_3_star_item(characters, weapons), "weapons"
 
-    return draw_3_star_item(items), "weapons"
+def draw_5_star_item(characters, weapons):
+    five_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 5}.keys())
+    return random.choice(five_star_items)
 
-def draw_5_star_item(items):
-    five_star_items = {k: v for k, v in items.items() if v == 5}
-    return random.choice(list(five_star_items.keys()))
+def draw_4_star_item(characters, weapons):
+    four_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 4}.keys())
+    return random.choice(four_star_items)
 
-def draw_4_star_item(items):
-    four_star_items = {k: v for k, v in items.items() if v == 4}
-    return random.choice(list(four_star_items.keys()))
+def draw_3_star_item(characters, weapons):
+    three_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 3}.keys())
+    return random.choice(three_star_items)
 
-def draw_3_star_item(items):
-    three_star_items = {k: v for k, v in items.items() if v == 3}
-    return random.choice(list(three_star_items.keys()))
-
-# Update item function
+# Updated item function for Constellation (C) and Refinement (R)
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
         user_data["bag"][item_type] = {}
@@ -220,41 +221,46 @@ def update_item(user_data, item, item_type):
                 new_level = current_level + 1
                 user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
 
-# Pull function
+# Adjusted Pull Function
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
+
     try:
         number_of_pulls = int(context.args[0])
     except (IndexError, ValueError):
         await update.message.reply_text("❗ Usage: /pull <number> (1-10)")
         return
+
     if number_of_pulls < 1 or number_of_pulls > 10:
         await update.message.reply_text("❗ Please specify a number between 1 and 10.")
         return
+
     total_cost = number_of_pulls * COST_PER_PULL
     if user_data["primos"] < total_cost:
         await update.message.reply_text(f"❗ You do not have enough primogems. Needed: {total_cost}")
         return
+    
     user_data["primos"] -= total_cost
     pull_counter = user_data.get('pull_counter', 0)
     last_five_star_pull = user_data.get('last_five_star_pull', 0)
     items_pulled = {"characters": [], "weapons": []}
-    
+
     for _ in range(number_of_pulls):
-        item, item_type = draw_item(WEAPONS, pull_counter, last_five_star_pull)
+        item, item_type = draw_item(CHARACTERS, WEAPONS, pull_counter, last_five_star_pull)
         items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
         pull_counter += 1
-        if item_type == "characters" and CHARACTERS.get(item) == 5:
+        if CHARACTERS.get(item) == 5:  # Update last 5-star pull if it's a character
             last_five_star_pull = pull_counter
+
     user_data['pull_counter'] = pull_counter
     user_data['last_five_star_pull'] = last_five_star_pull
     save_genshin_user(user_data)
-    
+
     characters_str = "\n".join([f"✨ {char} ({CHARACTERS[char]}★)" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
     weapons_str = "\n".join([f"⚔️ {weapon} ({WEAPONS[weapon]}★)" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
     
@@ -266,30 +272,33 @@ async def pull(update: Update, context: CallbackContext) -> None:
     )
     await update.message.reply_text(response, parse_mode='Markdown')
 
-# Improved Bag display with inline buttons
+# Improved Bag with Pagination Logic
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
     if not user_data:
         await update.message.reply_text("🔹 You need to start the bot first by using /start.")
         return
+
     primos = user_data.get("primos", 0)
     characters = user_data["bag"].get("characters", {})
     weapons = user_data["bag"].get("weapons", {})
-    
+
+    # Split into pages for better user experience
     characters_list = [f"✨ {char}: {info}" for char, info in characters.items()]
     weapons_list = [f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]
-    
+
     characters_str = "\n".join(characters_list) if characters_list else "No characters in bag."
     weapons_str = "\n".join(weapons_list) if weapons_list else "No weapons in bag."
-    
+
+    # Inline buttons to toggle between characters and weapons
     keyboard = [
         [InlineKeyboardButton("Characters", callback_data="characters"),
          InlineKeyboardButton("Weapons", callback_data="weapons")],
         [InlineKeyboardButton("Back", callback_data="back")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     response = (
         "🔹 **Your Bag:**\n\n"
         f"💎 **Primogems:** {primos}\n\n"
