@@ -8,8 +8,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, Callbac
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext, filters
 from token_1 import token
 
-from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, handle_message, send_reward, button
-
+from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, handle_message, send_reward, button, reset_bag_data, drop_primos
 # Global variables
 OWNER_ID = 5667016949
 
@@ -263,6 +262,8 @@ def main() -> None:
     application.add_handler(CommandHandler("bag", bag))
     application.add_handler(CommandHandler('add_primos', add_primos))
     application.add_handler(CommandHandler("leaderboard", leaderboard))
+    application.add_handler(CommandHandler('drop_primos', drop))
+    application.add_handler(CommandHandler("reset_bag_data", reset))
 
     # Add message handlers
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reward_primos))
