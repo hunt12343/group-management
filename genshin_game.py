@@ -14,10 +14,9 @@ db = client['telegram_bot']
 user_collection = db["users"]
 genshin_collection = db["genshin_users"]
 
-BASE_5_STAR_RATE = 0.02  
-HIGH_5_STAR_RATE = 0.60  
-PULL_THRESHOLD = 10  # Guarantee at least a 4-star item
-HIGH_PULL_THRESHOLD = 70  # After 70 pulls, higher chance of 5-star
+BASE_5_STAR_RATE = 0.006  # Base chance for a 5-star item
+GUARANTEED_5_STAR_PITY = 90  # Pulls needed for guaranteed 5-star
+PULL_THRESHOLD = 10  # After 70 pulls, higher chance of 5-star
 COST_PER_PULL = 160  # 160 primogems per pull
 GUARANTEED_5_STAR_PITY = 80 
 
