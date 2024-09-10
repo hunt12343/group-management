@@ -269,11 +269,15 @@ async def pull(update: Update, context: CallbackContext) -> None:
     items_pulled = {"characters": [], "weapons": []}
 
     for _ in range(number_of_pulls):
-        item, item_type = draw_item(CHARACTERS, WEAPONS, pull_counter, last_five_star_pull)
+        item, item_type, pity_reset = draw_item(CHARACTERS, WEAPONS, pull_counter, last_five_star_pull)
         items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
         pull_counter += 1
-        if CHARACTERS.get(item) == 5:  # Update last 5-star pull if it's a character
+        if item_type == "characters" and CHARACTERS.get(item) == 5:
+            last_five_star_pull = pull_counter
+        
+        # Update pity counter if needed
+        if pity_reset == 0:
             last_five_star_pull = pull_counter
 
     user_data['pull_counter'] = pull_counter
@@ -290,6 +294,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
         f"💎 **Remaining Primogems:** {user_data['primos']}"
     )
     await update.message.reply_text(response, parse_mode='Markdown')
+
     
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
