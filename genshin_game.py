@@ -4,6 +4,7 @@ import random
 from pymongo import MongoClient
 import logging
 from datetime import datetime
+from typing import Dict, Tuple
 
 OWNER_ID = 5667016949
 logging.basicConfig(level=logging.INFO)
