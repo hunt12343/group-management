@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 import random
 from pymongo import MongoClient
@@ -14,15 +14,12 @@ db = client['telegram_bot']
 user_collection = db["users"]
 genshin_collection = db["genshin_users"]
 
-
 BASE_5_STAR_RATE = 0.02  
 HIGH_5_STAR_RATE = 0.60  
-PULL_THRESHOLD = 10      
-HIGH_PULL_THRESHOLD = 70  
-COST_PER_PULL = 160 
-message_counts = {}
-
-
+PULL_THRESHOLD = 10  # Guarantee at least a 4-star item
+HIGH_PULL_THRESHOLD = 70  # After 70 pulls, higher chance of 5-star
+COST_PER_PULL = 160  # 160 primogems per pull
+GUARANTEED_5_STAR_PITY = 80 
 
 CHARACTERS = {
     # 5-star characters
@@ -173,9 +170,12 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
 # Draw an item based on current pull count and 5-star/4-star logic
 def draw_item(items, pull_counter, last_five_star_pull):
-    if pull_counter % PULL_THRESHOLD == 0:
-        item = draw_4_star_item(items)
+    if pull_counter >= GUARANTEED_5_STAR_PITY:
+        item = draw_5_star_item(items)
         return item, "characters" if "character" in item else "weapons"
+    
+    if pull_counter % PULL_THRESHOLD == 0:
+        return draw_4_star_item(items), "weapons"
     
     if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD:
         five_star_chance = HIGH_5_STAR_RATE
@@ -183,8 +183,7 @@ def draw_item(items, pull_counter, last_five_star_pull):
         five_star_chance = BASE_5_STAR_RATE
 
     if random.random() < five_star_chance:
-        item = draw_5_star_item(items)
-        return item, "characters" if "character" in item else "weapons"
+        return draw_5_star_item(items), "characters" if "character" in item else "weapons"
 
     return draw_3_star_item(items), "weapons"
 
@@ -200,6 +199,7 @@ def draw_3_star_item(items):
     three_star_items = {k: v for k, v in items.items() if v == 3}
     return random.choice(list(three_star_items.keys()))
 
+# Update item function
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
         user_data["bag"][item_type] = {}
@@ -220,6 +220,7 @@ def update_item(user_data, item, item_type):
                 new_level = current_level + 1
                 user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
 
+# Pull function
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -248,13 +249,15 @@ async def pull(update: Update, context: CallbackContext) -> None:
         items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
         pull_counter += 1
-        if item_type == "characters" and item in CHARACTERS and CHARACTERS[item] == 5:
+        if item_type == "characters" and CHARACTERS.get(item) == 5:
             last_five_star_pull = pull_counter
     user_data['pull_counter'] = pull_counter
     user_data['last_five_star_pull'] = last_five_star_pull
     save_genshin_user(user_data)
+    
     characters_str = "\n".join([f"✨ {char} ({CHARACTERS[char]}★)" for char in items_pulled["characters"]]) if items_pulled["characters"] else "No characters pulled."
     weapons_str = "\n".join([f"⚔️ {weapon} ({WEAPONS[weapon]}★)" for weapon in items_pulled["weapons"]]) if items_pulled["weapons"] else "No weapons pulled."
+    
     response = (
         "🔹 **Pull Results:**\n\n"
         f"{characters_str}\n"
@@ -262,7 +265,8 @@ async def pull(update: Update, context: CallbackContext) -> None:
         f"💎 **Remaining Primogems:** {user_data['primos']}"
     )
     await update.message.reply_text(response, parse_mode='Markdown')
-    
+
+# Improved Bag display with inline buttons
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -272,22 +276,27 @@ async def bag(update: Update, context: CallbackContext) -> None:
     primos = user_data.get("primos", 0)
     characters = user_data["bag"].get("characters", {})
     weapons = user_data["bag"].get("weapons", {})
+    
     characters_list = [f"✨ {char}: {info}" for char, info in characters.items()]
     weapons_list = [f"⚔️ {weapon}: {info}" for weapon, info in weapons.items()]
+    
     characters_str = "\n".join(characters_list) if characters_list else "No characters in bag."
     weapons_str = "\n".join(weapons_list) if weapons_list else "No weapons in bag."
+    
+    keyboard = [
+        [InlineKeyboardButton("Characters", callback_data="characters"),
+         InlineKeyboardButton("Weapons", callback_data="weapons")],
+        [InlineKeyboardButton("Back", callback_data="back")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
     response = (
         "🔹 **Your Bag:**\n\n"
         f"💎 **Primogems:** {primos}\n\n"
-        "👤 **Characters:**\n"
-        f"{characters_str}\n\n"
-        "⚔️ **Weapons:**\n"
-        f"{weapons_str}"
+        f"👤 **Characters:**\n{characters_str}\n\n"
+        f"⚔️ **Weapons:**\n{weapons_str}"
     )
-    await update.message.reply_text(response, parse_mode='Markdown')
-
-def get_all_genshin_users():
-    return list(genshin_collection.find({}, {"_id": 0, "user_id": 1, "primos": 1}))
+    await update.message.reply_text(response, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def leaderboard(update: Update, context: CallbackContext) -> None:
     users = get_all_genshin_users()
@@ -330,20 +339,6 @@ def handle_message(update, context):
     if message_counts[chat_id] % 100 == 0:
         send_reward(update, context)
 
-from telegram import Update
-from telegram.ext import CallbackContext
-from pymongo import MongoClient
-import logging
-
-OWNER_ID = 5667016949
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
-db = client['telegram_bot']
-genshin_collection = db["genshin_users"]
-
-# Function to reset bag data for all users
 async def reset_bag_data(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     if user_id != OWNER_ID:
