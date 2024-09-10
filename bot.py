@@ -262,7 +262,7 @@ def main() -> None:
     application.add_handler(CommandHandler("bag", bag))
     application.add_handler(CommandHandler('add_primos', add_primos))
     application.add_handler(CommandHandler("leaderboard", leaderboard))
-    application.add_handler(CommandHandler('drop_primos', drop))
+    application.add_handler(CommandHandler('drop_primos', drop_primos))
     application.add_handler(CommandHandler("reset_bag_data", reset))
 
     # Add message handlers
