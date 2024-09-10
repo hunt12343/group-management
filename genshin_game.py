@@ -172,21 +172,32 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
 import random
 
 def draw_item(characters, weapons, pull_counter, last_five_star_pull):
-    # Guarantee 5-star item after pity
+    # Check if we are due for a guaranteed 5-star item
     if pull_counter >= GUARANTEED_5_STAR_PITY:
         item = draw_5_star_item(characters, weapons)
         return item, "characters" if item in characters else "weapons"
     
+    # Check if we are due for a guaranteed 4-star item
     if pull_counter % PULL_THRESHOLD == 0:
-        return draw_4_star_item(characters, weapons), "weapons"  # Can tweak this logic
+        return draw_4_star_item(characters, weapons), "characters" if item in characters else "weapons"
 
     # Determine 5-star rate depending on pulls
-    five_star_chance = HIGH_5_STAR_RATE if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD else BASE_5_STAR_RATE
+    if pull_counter - last_five_star_pull >= HIGH_PULL_THRESHOLD:
+        five_star_chance = 0.90
+    else:
+        five_star_chance = BASE_5_STAR_RATE
 
+    # Draw a 5-star item based on chance
     if random.random() < five_star_chance:
-        return draw_5_star_item(characters, weapons), "characters" if item in characters else "weapons"
+        item = draw_5_star_item(characters, weapons)
+        return item, "characters" if item in characters else "weapons"
+
+    # Draw a 4-star item if not a 5-star item
+    if pull_counter % PULL_THRESHOLD == 0:
+        return draw_4_star_item(characters, weapons), "characters" if item in characters else "weapons"
     
-    return draw_3_star_item(characters, weapons), "weapons"
+    # Otherwise, draw a 3-star item
+    return draw_3_star_item(characters, weapons), "characters" if item in characters else "weapons"
 
 def draw_5_star_item(characters, weapons):
     five_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 5}.keys())
@@ -200,28 +211,35 @@ def draw_3_star_item(characters, weapons):
     three_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 3}.keys())
     return random.choice(three_star_items)
 
-# Updated item function for Constellation (C) and Refinement (R)
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
         user_data["bag"][item_type] = {}
+    
     if item not in user_data["bag"][item_type]:
-        user_data["bag"][item_type][item] = 1
+        if item_type == "characters":
+            user_data["bag"][item_type][item] = "✨ C1"  # Start with Constellation C1
+        elif item_type == "weapons":
+            user_data["bag"][item_type][item] = "⚔️ R1"  # Start with Refinement R1
     else:
         current_count = user_data["bag"][item_type][item]
-        
-        if isinstance(current_count, int):
-            user_data["bag"][item_type][item] += 1
-        else:
-            if item_type == "characters":
-                current_level = int(current_count.split('C')[1]) if 'C' in current_count else 0
+        if item_type == "characters":
+            # Update constellation level
+            if 'C' in current_count:
+                current_level = int(current_count.split('C')[1])
                 new_level = current_level + 1
                 user_data["bag"][item_type][item] = f"✨ C{new_level}"
-            elif item_type == "weapons":
-                current_level = int(current_count.split('R')[1]) if 'R' in current_count else 0
+            else:
+                user_data["bag"][item_type][item] = "✨ C2"  # Convert to C2 if initially missing
+        elif item_type == "weapons":
+            # Update refinement level
+            if 'R' in current_count:
+                current_level = int(current_count.split('R')[1])
                 new_level = current_level + 1
                 user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
+            else:
+                user_data["bag"][item_type][item] = "⚔️ R2"  # Convert to R2 if initially missing
 
-# Adjusted Pull Function
+
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -271,6 +289,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
         f"💎 **Remaining Primogems:** {user_data['primos']}"
     )
     await update.message.reply_text(response, parse_mode='Markdown')
+
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
     user_data = get_genshin_user_by_id(user_id)
@@ -305,16 +324,7 @@ async def bag(update: Update, context: CallbackContext) -> None:
     )
 
     await update.message.reply_text(response, reply_markup=reply_markup, parse_mode='Markdown')
-    
-async def leaderboard(update: Update, context: CallbackContext) -> None:
-    users = get_all_genshin_users()
-    sorted_users = sorted(users, key=lambda x: x.get('primos', 0), reverse=True)
-    leaderboard_str = "🔹 **Leaderboard:**\n\n"
-    for i, user in enumerate(sorted_users[:10], start=1):
-        first_name = user.get("first_name", "Unknown")
-        primogems = user.get("primos", 0)
-        leaderboard_str += f"{i}. 🏆 {first_name} - {primogems} Primogems\n"
-    await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
+
 
 async def button(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
@@ -342,6 +352,18 @@ async def button(update: Update, context: CallbackContext) -> None:
 
     # Edit the message with the new content
     await query.edit_message_text(response, parse_mode='Markdown')
+
+
+    
+async def leaderboard(update: Update, context: CallbackContext) -> None:
+    users = get_all_genshin_users()
+    sorted_users = sorted(users, key=lambda x: x.get('primos', 0), reverse=True)
+    leaderboard_str = "🔹 **Leaderboard:**\n\n"
+    for i, user in enumerate(sorted_users[:10], start=1):
+        first_name = user.get("first_name", "Unknown")
+        primogems = user.get("primos", 0)
+        leaderboard_str += f"{i}. 🏆 {first_name} - {primogems} Primogems\n"
+    await update.message.reply_text(leaderboard_str, parse_mode='Markdown')
 
 def handle_message(update, context):
     chat_id = update.effective_chat.id
