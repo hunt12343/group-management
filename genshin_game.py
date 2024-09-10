@@ -174,7 +174,7 @@ def draw_item(characters: Dict[str, int], weapons: Dict[str, int], pull_counter:
         return item, "characters" if item in characters else "weapons"
     
     # Check if we are due for a guaranteed 4-star item
-    if pull_counter % PULL_THRESHOLD == 0:
+    if pull_counter % PULL_THRESHOLD == 0 and pull_counter != 0:
         item = draw_4_star_item(characters, weapons)
         return item, "characters" if item in characters else "weapons"
 
@@ -190,7 +190,7 @@ def draw_item(characters: Dict[str, int], weapons: Dict[str, int], pull_counter:
         return item, "characters" if item in characters else "weapons"
 
     # Draw a 4-star item if not a 5-star item
-    if pull_counter % PULL_THRESHOLD == 0:
+    if pull_counter % PULL_THRESHOLD == 0 and pull_counter != 0:
         item = draw_4_star_item(characters, weapons)
         return item, "characters" if item in characters else "weapons"
     
