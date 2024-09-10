@@ -329,3 +329,47 @@ def handle_message(update, context):
     message_counts[chat_id] = message_counts.get(chat_id, 0) + 1
     if message_counts[chat_id] % 100 == 0:
         send_reward(update, context)
+
+from telegram import Update
+from telegram.ext import CallbackContext
+from pymongo import MongoClient
+import logging
+
+OWNER_ID = 5667016949
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot') 
+db = client['telegram_bot']
+genshin_collection = db["genshin_users"]
+
+# Function to reset bag data for all users
+async def reset_bag_data(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    # Reset bag data for all users
+    genshin_collection.update_many({}, {"$set": {"bag": {}}})
+    logger.info("Bag data reset for all users.")
+    await update.message.reply_text("Bag data has been reset for all users.")
+
+# Function to drop primos to all users
+async def drop_primos(update: Update, context: CallbackContext) -> None:
+    user_id = update.effective_user.id
+    if user_id != OWNER_ID:
+        await update.message.reply_text("You do not have permission to use this command.")
+        return
+
+    try:
+        amount = int(context.args[0])
+    except (IndexError, ValueError):
+        await update.message.reply_text("Please specify a valid number of primos to drop. Usage: /drop <amount>")
+        return
+
+    # Add the specified amount of primos to all users
+    genshin_collection.update_many({}, {"$inc": {"primos": amount}})
+    logger.info(f"{amount} primos dropped to all users.")
+    await update.message.reply_text(f"{amount} primos have been dropped to all users.")
+
