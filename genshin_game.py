@@ -168,16 +168,17 @@ GUARANTEED_5_STAR_PITY = 80  # Pulls needed for guaranteed 5-star
 PULL_THRESHOLD = 10  # Pulls needed for guaranteed 4-star
 COST_PER_PULL = 160  # 160 primogems per pull
 
-def draw_item(characters: Dict[str, int], weapons: Dict[str, int], pull_counter: int, last_five_star_pull: int) -> Tuple[str, str]:
-    # Check if we are due for a guaranteed 5-star item
-    if pull_counter >= GUARANTEED_5_STAR_PITY:
+def draw_item(characters: Dict[str, int], weapons: Dict[str, int], pull_counter: int, last_five_star_pull: int) -> Tuple[str, str, int]:
+    # Determine if we should draw a 5-star item
+    if pull_counter - last_five_star_pull >= GUARANTEED_5_STAR_PITY:
         item = draw_5_star_item(characters, weapons)
-        return item, "characters" if item in characters else "weapons"
-    
+        # Reset pity counter after drawing a 5-star item
+        return item, "characters" if item in characters else "weapons", 0
+
     # Check if we are due for a guaranteed 4-star item
     if pull_counter % PULL_THRESHOLD == 0 and pull_counter != 0:
         item = draw_4_star_item(characters, weapons)
-        return item, "characters" if item in characters else "weapons"
+        return item, "characters" if item in characters else "weapons", pull_counter + 1
 
     # Determine 5-star rate depending on pulls
     if pull_counter - last_five_star_pull >= GUARANTEED_5_STAR_PITY:
@@ -188,16 +189,17 @@ def draw_item(characters: Dict[str, int], weapons: Dict[str, int], pull_counter:
     # Draw a 5-star item based on chance
     if random.random() < five_star_chance:
         item = draw_5_star_item(characters, weapons)
-        return item, "characters" if item in characters else "weapons"
+        # Reset pity counter after drawing a 5-star item
+        return item, "characters" if item in characters else "weapons", 0
 
     # Draw a 4-star item if not a 5-star item
     if pull_counter % PULL_THRESHOLD == 0 and pull_counter != 0:
         item = draw_4_star_item(characters, weapons)
-        return item, "characters" if item in characters else "weapons"
-    
+        return item, "characters" if item in characters else "weapons", pull_counter + 1
+
     # Otherwise, draw a 3-star item
     item = draw_3_star_item(characters, weapons)
-    return item, "characters" if item in characters else "weapons"
+    return item, "characters" if item in characters else "weapons", pull_counter + 1
 
 def draw_5_star_item(characters: Dict[str, int], weapons: Dict[str, int]) -> str:
     five_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 5}.keys())
@@ -237,7 +239,7 @@ def update_item(user_data: Dict, item: str, item_type: str):
                 new_level = current_level + 1
                 user_data["bag"][item_type][item] = f"⚔️ R{new_level}"
             else:
-                user_data["bag"][item_type][item] = "⚔️ R2"  # Convert to R2 if initially missing
+                user_data["bag"][item_type][item] = "⚔️ R2"
 
 async def pull(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
