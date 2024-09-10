@@ -79,7 +79,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         new_genshin_user = {
             "user_id": user_id,
             "first_name": first_name,  # Save the first name in Genshin users
-            "primos": 3200,  # Adjust initial primogems as needed
+            "primos": 16000,  # Adjust initial primogems as needed
             "bag": {}
         }
         save_genshin_user(new_genshin_user)
