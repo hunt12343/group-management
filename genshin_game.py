@@ -14,12 +14,6 @@ db = client['telegram_bot']
 user_collection = db["users"]
 genshin_collection = db["genshin_users"]
 
-BASE_5_STAR_RATE = 0.006  # Base chance for a 5-star item
-GUARANTEED_5_STAR_PITY = 90  # Pulls needed for guaranteed 5-star
-PULL_THRESHOLD = 10  # After 70 pulls, higher chance of 5-star
-COST_PER_PULL = 160  # 160 primogems per pull
-GUARANTEED_5_STAR_PITY = 80 
-
 CHARACTERS = {
     # 5-star characters
     "Albedo": 5, "Alhaitham": 5, "Aloy": 5, "Ayaka": 5, "Ayato": 5, "Baizhu": 5, "Cyno": 5, 
@@ -167,26 +161,30 @@ async def add_primos(update: Update, context: CallbackContext) -> None:
     user_data["primos"] = user_data.get("primos", 0) + amount
     save_genshin_user(user_data)
     await update.message.reply_text(f"✅ {amount} primogems have been added to user {user_id}'s account.")
-# Draw an item based on current pull count and 5-star/4-star logic
-import random
-
-import random
 
 BASE_5_STAR_RATE = 0.006  # Base chance for a 5-star item
 GUARANTEED_5_STAR_PITY = 90  # Pulls needed for guaranteed 5-star
+PULL_THRESHOLD = 10  # After 70 pulls, higher chance of 5-star
+COST_PER_PULL = 160  # 160 primogems per pull
+GUARANTEED_5_STAR_PITY = 80 
+
+BASE_5_STAR_RATE = 0.006  # Base chance for a 5-star item
+GUARANTEED_5_STAR_PITY = 80  # Pulls needed for guaranteed 5-star
 PULL_THRESHOLD = 10  # Pulls needed for guaranteed 4-star
+COST_PER_PULL = 160  # 160 primogems per pull
 
 def draw_item(characters, weapons, pull_counter, last_five_star_pull):
-    # Check if we are due for a guaranteed 5-star item
-    if pull_counter >= GUARANTEED_5_STAR_PITY:
+    # Determine if we are due for a guaranteed 5-star item
+    if pull_counter - last_five_star_pull >= GUARANTEED_5_STAR_PITY:
         item = draw_5_star_item(characters, weapons)
         return item, "characters" if item in characters else "weapons"
     
-    # Check if we are due for a guaranteed 4-star item
+    # Determine if we are due for a guaranteed 4-star item
     if pull_counter % PULL_THRESHOLD == 0:
-        return draw_4_star_item(characters, weapons), "characters" if item in characters else "weapons"
+        item = draw_4_star_item(characters, weapons)
+        return item, "characters" if item in characters else "weapons"
 
-    # Determine 5-star rate depending on pulls
+    # Determine 5-star draw chance
     if pull_counter - last_five_star_pull >= GUARANTEED_5_STAR_PITY:
         five_star_chance = 1.0
     else:
@@ -206,18 +204,17 @@ def draw_item(characters, weapons, pull_counter, last_five_star_pull):
     item = draw_3_star_item(characters, weapons)
     return item, "characters" if item in characters else "weapons"
 
-
 def draw_5_star_item(characters, weapons):
     five_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 5}.keys())
-    return random.choice(five_star_items)
+    return random.choice(five_star_items) if five_star_items else None
 
 def draw_4_star_item(characters, weapons):
     four_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 4}.keys())
-    return random.choice(four_star_items)
+    return random.choice(four_star_items) if four_star_items else None
 
 def draw_3_star_item(characters, weapons):
     three_star_items = list({k: v for k, v in {**characters, **weapons}.items() if v == 3}.keys())
-    return random.choice(three_star_items)
+    return random.choice(three_star_items) if three_star_items else None
 
 def update_item(user_data, item, item_type):
     if item_type not in user_data["bag"]:
@@ -277,11 +274,11 @@ async def pull(update: Update, context: CallbackContext) -> None:
 
     for _ in range(number_of_pulls):
         item, item_type = draw_item(CHARACTERS, WEAPONS, pull_counter, last_five_star_pull)
+        if CHARACTERS.get(item) == 5:  # Update last 5-star pull if it's a character
+            last_five_star_pull = pull_counter
         items_pulled[item_type].append(item)
         update_item(user_data, item, item_type)
         pull_counter += 1
-        if CHARACTERS.get(item) == 5:  # Update last 5-star pull if it's a character
-            last_five_star_pull = pull_counter
 
     user_data['pull_counter'] = pull_counter
     user_data['last_five_star_pull'] = last_five_star_pull
@@ -297,6 +294,7 @@ async def pull(update: Update, context: CallbackContext) -> None:
         f"💎 **Remaining Primogems:** {user_data['primos']}"
     )
     await update.message.reply_text(response, parse_mode='Markdown')
+
 
 async def bag(update: Update, context: CallbackContext) -> None:
     user_id = str(update.effective_user.id)
