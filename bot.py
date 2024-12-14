@@ -9,6 +9,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 from token_1 import token
 
 from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, handle_message, button, reset_bag_data, drop_primos
+from minigame import dart, basketball, flip, dice
 # Global variables
 OWNER_ID = 5667016949
 
@@ -117,43 +118,6 @@ async def profile(update: Update, context: CallbackContext) -> None:
     else:
         await update.message.reply_text("You need to start the bot first by using /start.")
 
-async def dart(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-
-    user_data = get_user_by_id(user_id)
-
-    if not user_data:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    result = random.choice(["bullseye", "miss"])
-    if result == "bullseye":
-        update_user_credits(user_id, 100)
-        await update.message.reply_text("🎯")  # Send emoji first
-        await update.message.reply_text("Bullseye! You earned 100 credits! 😎")  # Send text message
-    else:
-        update_user_credits(user_id, -100)
-        await update.message.reply_text("🎯")  # Send emoji first
-        await update.message.reply_text("Miss! You lost 100 credits. 😢")  # Send text message
-
-async def basketball(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-
-    user_data = get_user_by_id(user_id)
-
-    if not user_data:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    result = random.choice(["score", "miss"])
-    if result == "score":
-        update_user_credits(user_id, 75)
-        await update.message.reply_text("🏀")  # Send emoji first
-        await update.message.reply_text("Score! You earned 75 credits! 🏆")  # Send text message
-    else:
-        update_user_credits(user_id, -75)
-        await update.message.reply_text("🏀")  # Send emoji first
-        await update.message.reply_text("Miss! You lost 75 credits. 😞")  # Send text message
 
 
 def main() -> None:
@@ -168,6 +132,7 @@ def main() -> None:
     application.add_handler(CommandHandler("bet", bet))
     application.add_handler(CommandHandler("dart", dart))
     application.add_handler(CommandHandler("basketball", basketball))
+    application.add_handler(CommandHandler("dice", dice))
     application.add_handler(CommandHandler("pull", pull))
     application.add_handler(CommandHandler("bag", bag))
     application.add_handler(CommandHandler('add_primos', add_primos))
