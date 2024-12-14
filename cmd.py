@@ -13,7 +13,7 @@ muted_users = set()
 MUTE_IDS = [5667016949, 1474610394, 1322464076]
 
 async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in Mute_IDS_IDS:
+    if update.effective_user.id not in Mute_IDS:
         await update.message.reply_text("You are not authorized to use this command.")
         return
 
