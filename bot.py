@@ -10,6 +10,7 @@ from token_1 import token
 
 from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, handle_message, button, reset_bag_data, drop_primos
 from minigame import dart, basketball, flip, dice
+from cmd import amute, aunmute, delete_muted_messages
 # Global variables
 OWNER_ID = 5667016949
 
@@ -135,14 +136,18 @@ def main() -> None:
     application.add_handler(CommandHandler("dice", dice))
     application.add_handler(CommandHandler("pull", pull))
     application.add_handler(CommandHandler("bag", bag))
+    application.add_handler(CommandHandler("amute", amute))
+    application.add_handler(CommandHandler("aunmute", aunmute))
     application.add_handler(CommandHandler('add_primos', add_primos))
     application.add_handler(CommandHandler("leaderboard", leaderboard))
     application.add_handler(CommandHandler('drop_primos', drop_primos))
     application.add_handler(CommandHandler("reset_bag_data", reset_bag_data))
+    
 
     # Add message handlers
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reward_primos))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
 
     # Add callback query handler for inline buttons
     application.add_handler(CallbackQueryHandler(button))
