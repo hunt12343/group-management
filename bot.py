@@ -128,7 +128,6 @@ def main() -> None:
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("profile", profile))
-    application.add_handler(CommandHandler("roulette", roulette))
     application.add_handler(CommandHandler("flip", flip))
     application.add_handler(CommandHandler("bet", bet))
     application.add_handler(CommandHandler("dart", dart))
