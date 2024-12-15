@@ -94,7 +94,7 @@ def main() -> None:
     # Add message handler to delete messages from muted users
     application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
 
-    application.run_polling(port=port)
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
