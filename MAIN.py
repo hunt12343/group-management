@@ -28,6 +28,12 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
 
     try:
+        # Check if the user is an admin
+        chat_member = await context.bot.get_chat_member(chat_id, user_to_mute)
+        if chat_member.status in ['administrator', 'creator']:
+            await update.message.reply_text(f"{update.message.reply_to_message.from_user.full_name} cannot be muted because they are an admin.")
+            return
+
         # Add user to the muted list
         muted_users.add(user_to_mute)
         await context.bot.restrict_chat_member(
@@ -36,6 +42,7 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
             permissions=ChatPermissions(can_send_messages=False)
         )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been muted.")
+
     except Exception as e:
         await update.message.reply_text(f"Failed to mute user: {e}")
 
@@ -52,16 +59,19 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
 
     try:
-        # Remove user from the muted list
         muted_users.discard(user_to_unmute)
+
+        # Remove restrictions
         await context.bot.restrict_chat_member(
             chat_id,
             user_to_unmute,
             permissions=ChatPermissions(can_send_messages=True)
         )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been unmuted.")
+
     except Exception as e:
         await update.message.reply_text(f"Failed to unmute user: {e}")
+
 
 async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.from_user.id in muted_users:
