@@ -1,10 +1,11 @@
 import random
 from telegram import Update, MessageEntity
-from telegram.ext import CallbackContext
-from datetime import datetime
 from pymongo import MongoClient
 import logging
 import secrets
+from datetime import datetime, timedelta
+from telegram.ext import CallbackContext
+from html import escape
 
 # MongoDB setup
 client = MongoClient('mongodb+srv://Joybot:Joybot123@joybot.toar6.mongodb.net/?retryWrites=true&w=majority&appName=Joybot')
@@ -31,15 +32,46 @@ def escape_markdown_v2(text):
     escape_chars = r'\_*[]()~`>#+-=|{}.!'
     return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
 
+def get_ist_time() -> str:
+    """Return the current time in IST (Indian Standard Time) as a formatted string."""
+    # Add 5 hours and 30 minutes to UTC
+    ist_time = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    return ist_time.strftime('%Y-%m-%d %I:%M %p')  # Example: 2024-06-15 04:30 PM
+
+def escape_html(text: str) -> str:
+    """Escape special characters for safe use in HTML."""
+    return escape(text)
+
 async def flip(update: Update, context: CallbackContext) -> None:
+    """Handle the /flip command to simulate a coin flip with IST timestamp."""
     user = update.effective_user
+    chat_id = update.effective_chat.id
     result = secrets.choice(["heads", "tails"])
-    user_link = f"<a href='tg://user?id={user.id}'>{escape_markdown_v2(user.first_name)}</a>"
-    message = f"『 {user_link} 』flipped a coin!\n\nIt's {result}! Timestamp: {datetime.now()}"
+    
+    # Create a safe HTML link for the user
+    user_link = f"<a href='tg://user?id={user.id}'>{escape_html(user.first_name)}</a>"
+
+    # Get current IST time
+    ist_timestamp = get_ist_time()
+
+    # Construct the message
+    message = (
+        f"『 {user_link} 』flipped a coin! 🪙\n\n"
+        f"It's <b>{result}</b>!\n"
+        f"🕰️ Timestamp (IST): {ist_timestamp}"
+    )
+
+    # Reply to a specific message if applicable
     if update.message.reply_to_message:
         original_msg_id = update.message.reply_to_message.message_id
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=message, parse_mode='HTML', reply_to_message_id=original_msg_id)
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=message,
+            parse_mode='HTML',
+            reply_to_message_id=original_msg_id
+        )
     else:
+        # Send the message normally
         await update.message.reply_text(message, parse_mode='HTML')
 
 async def dice(update: Update, context: CallbackContext) -> None:
