@@ -2,7 +2,6 @@ from token_1 import token
 from telegram import Update, ChatPermissions
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import logging
-from aiohttp import web
 import asyncio
 
 # Enable logging
@@ -15,10 +14,8 @@ OWNER_IDS = [5667016949]
 # List of admin IDs
 admin_ids = set()
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hi! I'm your bot. Use /amute, /aunmute, /addowner, /add_admin, and /remove_admin to control users.")
-
 
 async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS and update.effective_user.id not in admin_ids:
@@ -44,7 +41,6 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"Failed to mute user: {e}")
 
-
 async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS and update.effective_user.id not in admin_ids:
         await update.message.reply_text("You are not authorized to use this command.")
@@ -69,7 +65,6 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"Failed to unmute user: {e}")
 
-
 async def add_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
         await update.message.reply_text("You are not authorized to use this command.")
@@ -88,7 +83,6 @@ async def add_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"User ID {new_owner_id} has been added as an owner.")
     except ValueError:
         await update.message.reply_text("Invalid user ID. Please provide a numeric user ID.")
-
 
 async def add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
@@ -109,7 +103,6 @@ async def add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("Invalid user ID. Please provide a numeric user ID.")
 
-
 async def remove_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
         await update.message.reply_text("You are not authorized to use this command.")
@@ -129,7 +122,6 @@ async def remove_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("Invalid user ID. Please provide a numeric user ID.")
 
-
 async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.from_user.id in muted_users:
         try:
@@ -141,7 +133,6 @@ async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TY
             logger.error(f"Failed to delete message from muted user: {e}")
 
 async def main():
-
     # Initialize the application
     application = Application.builder().token(token).build()
 
@@ -158,7 +149,6 @@ async def main():
 
     # Run the bot
     await application.run_polling()
-
 
 if __name__ == "__main__":
     asyncio.run(main())
