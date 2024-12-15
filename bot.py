@@ -152,10 +152,13 @@ def main() -> None:
 
     
 
-    # Add message handlers
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reward_primos))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
+# Handlers for specific non-command messages
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reward_primos))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+# Delete messages from muted users
+application.add_handler(MessageHandler(filters.ALL, delete_muted_messages))
+
 
     # Add callback query handler for inline buttons
     application.add_handler(CallbackQueryHandler(button))
