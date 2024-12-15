@@ -74,6 +74,7 @@ async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TY
             logger.error(f"Failed to delete message from muted user: {e}")
 
 def main() -> None:
+    port = int(os.getenv("PORT", 8000))
     # Replace 'YOUR_TOKEN_HERE' with your actual bot token
     application = Application.builder().token("6970211159:AAH-D8Ixmb3ZAIaTN2ZsulHNIhEPhShqMh4").build()
 
@@ -85,7 +86,7 @@ def main() -> None:
     # Add message handler to delete messages from muted users
     application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
 
-    application.run_polling()
+    application.run_polling(port=port)
 
 if __name__ == '__main__':
     main()
