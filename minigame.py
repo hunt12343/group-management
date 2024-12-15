@@ -36,7 +36,7 @@ def get_ist_time() -> str:
     """Return the current time in IST (Indian Standard Time) as a formatted string."""
     # Add 5 hours and 30 minutes to UTC
     ist_time = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    return ist_time.strftime('%Y-%m-%d %I:%M %p')  # Example: 2024-06-15 04:30 PM
+    return ist_time.strftime('%Y-%m-%d %I:%M:%S %p')  # Example: 2024-06-15 04:30 PM
 
 def escape_html(text: str) -> str:
     """Escape special characters for safe use in HTML."""
