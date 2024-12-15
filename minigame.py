@@ -27,6 +27,9 @@ def update_user_credits(user_id, amount):
         {"user_id": user_id},
         {"$inc": {"credits": amount}}
     )
+def escape_markdown_v2(text):
+    escape_chars = r'\_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
 
 async def flip(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
