@@ -1,7 +1,7 @@
 import random
-from datetime import datetime
-from telegram import Update
+from telegram import Update, MessageEntity
 from telegram.ext import CallbackContext
+from datetime import datetime
 from pymongo import MongoClient
 import logging
 
@@ -40,9 +40,17 @@ async def flip(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text("Heads or Tails?")  # Send text message
 
 async def dice(update: Update, context: CallbackContext) -> None:
-    roll = random.randint(1, 6)
-    await update.message.reply_text("🎲")  # Send the dice emoji first
-    await update.message.reply_text(f"You rolled a {roll}")  # Send text message
+    # Check if there's a user mentioned in the message
+    if update.message.entities and update.message.entities[0].type == MessageEntity.MENTION:
+        mentioned_user_id = update.message.entities[0].user.id
+        mentioned_user = f"[{update.message.entities[0].user.first_name}](tg://user?id={mentioned_user_id})"
+
+        # Tag the mentioned user and send the emoji
+        await update.message.reply_text(f"{mentioned_user} 🎲")
+    else:
+        # If no user is tagged, just send the emoji
+        await update.message.reply_text("🎲")
+
 
         
 async def credits_leaderboard(update: Update, context: CallbackContext) -> None:
