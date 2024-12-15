@@ -27,29 +27,40 @@ def update_user_credits(user_id, amount):
         {"$inc": {"credits": amount}}
     )
 
+class Emoji:
+    DICE = "🎲"
+    DART = "🎯"
+    BASKETBALL = "🏀"
+    COIN_FLIP = "🪙"
+
+# Function to get the tagged user or default to the sender
+async def get_tagged_user(update: Update):
+    if update.message.entities:
+        for entity in update.message.entities:
+            if entity.type == MessageEntity.MENTION:
+                user = update.message.entities[0].user
+                return f"[{user.first_name}](tg://user?id={user.id})"
+    return f"[{update.effective_user.first_name}](tg://user?id={update.effective_user.id})"
+
+# Mini-game: Dart  
 async def dart(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("🎯")  # Send the dart emoji first
-    await update.message.reply_text("Bullseye!")  # Send text message
+    user_tag = await get_tagged_user(update)
+    await update.message.reply_text(f"{user_tag} {Emoji.DART}")
 
+# Mini-game: Basketball  
 async def basketball(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("🏀")  # Send the basketball emoji first
-    await update.message.reply_text("Score!")  # Send text message
+    user_tag = await get_tagged_user(update)
+    await update.message.reply_text(f"{user_tag} {Emoji.BASKETBALL}")
 
+# Mini-game: Coin Flip  
 async def flip(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("🪙")  # Send the coin flip emoji first
-    await update.message.reply_text("Heads or Tails?")  # Send text message
+    user_tag = await get_tagged_user(update)
+    await update.message.reply_text(f"{user_tag} {Emoji.COIN_FLIP}")
 
+# Mini-game: Dice Roll  
 async def dice(update: Update, context: CallbackContext) -> None:
-    # Check if there's a user mentioned in the message
-    if update.message.entities and update.message.entities[0].type == MessageEntity.MENTION:
-        mentioned_user_id = update.message.entities[0].user.id
-        mentioned_user = f"[{update.message.entities[0].user.first_name}](tg://user?id={mentioned_user_id})"
-
-        # Tag the mentioned user and send the emoji
-        await update.message.reply_text(f"{mentioned_user} 🎲")
-    else:
-        # If no user is tagged, just send the emoji
-        await update.message.reply_text("🎲")
+    user_tag = await get_tagged_user(update)
+    await update.message.reply_text(f"{user_tag} {Emoji.DICE}")
 
 
         
