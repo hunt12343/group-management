@@ -10,7 +10,10 @@ logger = logging.getLogger(__name__)
 muted_users = set()
 
 # List of owner IDs
-OWNER_IDS = [5667016949, 1474610394, 1322464076]
+OWNER_IDS = [5667016949, 1474610394]
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Hi! I'm your bot. Use /amute and /aunmute to control users.")
 
 async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
