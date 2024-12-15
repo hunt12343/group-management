@@ -157,7 +157,11 @@ async def start_health_server():
     await site.start()
 
 
-def main():
+async def main():
+    # Start the health server in a separate coroutine
+    await start_health_server()
+
+    # Initialize the application
     application = Application.builder().token(token).build()
 
     # Add command handlers
@@ -171,10 +175,8 @@ def main():
     # Add message handler to delete messages from muted users
     application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
 
-    # Start the health server in a background task
-    asyncio.create_task(start_health_server())
-
-    application.run_polling(poll_interval=5)
+    # Run the bot
+    await application.run_polling()
 
 
 if __name__ == "__main__":
