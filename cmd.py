@@ -59,13 +59,15 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been unmuted.")
     except Exception as e:
         await update.message.reply_text(f"Unmuted!!!")
-
 async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Check if the message is from a muted user
     if update.message and update.message.from_user.id in muted_users:
         try:
+            # Delete the message
             await context.bot.delete_message(
                 chat_id=update.message.chat_id,
                 message_id=update.message.message_id
             )
         except Exception as e:
-            logger.error(f"Failed to delete message from muted user: {e}")
+            logger.error(f"Failed to delete message from muted user {update.message.from_user.id}: {e}")
+
