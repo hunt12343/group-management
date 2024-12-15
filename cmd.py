@@ -12,9 +12,6 @@ muted_users = set()
 # List of owner IDs
 OWNER_IDS = [5667016949, 1474610394]
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hi! I'm your bot. Use /amute and /aunmute to control users.")
-
 async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
         await update.message.reply_text("You are not authorized to use this command.")
@@ -27,17 +24,38 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_to_mute = update.message.reply_to_message.from_user.id
     chat_id = update.message.chat_id
 
+    logger.info(f"Attempting to mute user {user_to_mute} in chat {chat_id}")
+
     try:
-        # Add user to the muted list
+        # Check if the bot has admin privileges
+        chat_member = await context.bot.get_chat_member(chat_id, context.bot.id)
+        if not chat_member.can_restrict_members:
+            await update.message.reply_text("I don't have permission to restrict members. Please make me an admin with the required rights.")
+            return
+
+        # Ensure the user to mute is not an admin
+        target_member = await context.bot.get_chat_member(chat_id, user_to_mute)
+        if target_member.status in ["administrator", "creator"]:
+            await update.message.reply_text("I cannot mute administrators or the group owner.")
+            return
+
+        # Mute the user
         muted_users.add(user_to_mute)
         await context.bot.restrict_chat_member(
-            chat_id,
-            user_to_mute,
-            permissions=ChatPermissions(can_send_messages=False)
+            chat_id=chat_id,
+            user_id=user_to_mute,
+            permissions=ChatPermissions(
+                can_send_messages=False,
+                can_send_media_messages=False,
+                can_send_other_messages=False,
+                can_add_web_page_previews=False
+            )
         )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been muted.")
     except Exception as e:
+        logger.error(f"Failed to mute user {user_to_mute}: {e}")
         await update.message.reply_text(f"Failed to mute user: {e}")
+
 
 async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
