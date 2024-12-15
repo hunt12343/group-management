@@ -3,6 +3,7 @@ from telegram import Update, ChatPermissions
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import logging
 from aiohttp import web
+import asyncio
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -147,13 +148,16 @@ async def health_check(request):
     return web.Response(text="OK", status=200)
 
 
-def start_health_server():
+async def start_health_server():
     app = web.Application()
     app.add_routes([web.get("/", health_check)])
-    return app
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, host="0.0.0.0", port=8080)
+    await site.start()
 
 
-def main() -> None:
+def main():
     application = Application.builder().token(token).build()
 
     # Add command handlers
@@ -167,10 +171,11 @@ def main() -> None:
     # Add message handler to delete messages from muted users
     application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
 
-    # Start health check server
-    runner = web.AppRunner(start_health_server())
-    application.run_polling(poll_interval=5, runner=runner)
+    # Start the health server in a background task
+    asyncio.create_task(start_health_server())
+
+    application.run_polling(poll_interval=5)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
