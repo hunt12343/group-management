@@ -136,7 +136,7 @@ async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TY
 
 def main() -> None:
     # Replace 'YOUR_TOKEN_HERE' with your actual bot token
-    application = Application.builder().token("token").build()
+     application = Application.builder().token(token).build()
 
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
