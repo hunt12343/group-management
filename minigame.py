@@ -27,41 +27,60 @@ def update_user_credits(user_id, amount):
         {"$inc": {"credits": amount}}
     )
 
-class Emoji:
-    DICE = "🎲"
-    DART = "🎯"
-    BASKETBALL = "🏀"
-    COIN_FLIP = "🪙"
-
-# Function to get the tagged user or default to the sender
-async def get_tagged_user(update: Update):
-    if update.message.entities:
-        for entity in update.message.entities:
-            if entity.type == MessageEntity.MENTION:
-                user = update.message.entities[0].user
-                return f"[{user.first_name}](tg://user?id={user.id})"
-    return f"[{update.effective_user.first_name}](tg://user?id={update.effective_user.id})"
-
-# Mini-game: Dart  
-async def dart(update: Update, context: CallbackContext) -> None:
-    user_tag = await get_tagged_user(update)
-    await update.message.reply_text(f"{user_tag} {Emoji.DART}")
-
-# Mini-game: Basketball  
-async def basketball(update: Update, context: CallbackContext) -> None:
-    user_tag = await get_tagged_user(update)
-    await update.message.reply_text(f"{user_tag} {Emoji.BASKETBALL}")
-
-# Mini-game: Coin Flip  
 async def flip(update: Update, context: CallbackContext) -> None:
-    user_tag = await get_tagged_user(update)
-    await update.message.reply_text(f"{user_tag} {Emoji.COIN_FLIP}")
+    user = update.effective_user
+    result = secrets.choice(["heads", "tails"])
+    user_link = f"<a href='tg://user?id={user.id}'>{escape_markdown_v2(user.first_name)}</a>"
+    message = f"『 {user_link} 』flipped a coin!\n\nIt's {result}! Timestamp: {datetime.now()}"
+    if update.message.reply_to_message:
+        original_msg_id = update.message.reply_to_message.message_id
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=message, parse_mode='HTML', reply_to_message_id=original_msg_id)
+    else:
+        await update.message.reply_text(message, parse_mode='HTML')
 
-# Mini-game: Dice Roll  
 async def dice(update: Update, context: CallbackContext) -> None:
-    user_tag = await get_tagged_user(update)
-    await update.message.reply_text(f"{user_tag} {Emoji.DICE}")
+    chat_type = update.effective_chat.type
+    if chat_type in ['group', 'supergroup']:
+        if update.message.reply_to_message:
+            user_dice_msg_id = update.message.reply_to_message.message_id
+            await context.bot.send_dice(chat_id=update.effective_chat.id, reply_to_message_id=user_dice_msg_id)
+        else:
+            await update.message.reply_text("Please reply to a user's message to roll a dice for them.")
+    else:
+        await context.bot.send_dice(chat_id=update.effective_chat.id)
 
+async def football(update: Update, context: CallbackContext) -> None:
+    chat_type = update.effective_chat.type
+    if chat_type in ['group', 'supergroup']:
+        if update.message.reply_to_message:
+            user_msg_id = update.message.reply_to_message.message_id
+            await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='⚽', reply_to_message_id=user_msg_id)
+        else:
+            await update.message.reply_text("Please reply to a user's message to play football for them.")
+    else:
+        await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='⚽')
+
+async def basketball(update: Update, context: CallbackContext) -> None:
+    chat_type = update.effective_chat.type
+    if chat_type in ['group', 'supergroup']:
+        if update.message.reply_to_message:
+            user_msg_id = update.message.reply_to_message.message_id
+            await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🏀', reply_to_message_id=user_msg_id)
+        else:
+            await update.message.reply_text("Please reply to a user's message to play basketball for them.")
+    else:
+        await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🏀')
+
+async def dart(update: Update, context: CallbackContext) -> None:
+    chat_type = update.effective_chat.type
+    if chat_type in ['group', 'supergroup']:
+        if update.message.reply_to_message:
+            user_msg_id = update.message.reply_to_message.message_id
+            await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🎯', reply_to_message_id=user_msg_id)
+        else:
+            await update.message.reply_text("Please reply to a user's message to play darts for them.")
+    else:
+        await context.bot.send_dice(chat_id=update.effective_chat.id, emoji='🎯')
 
         
 async def credits_leaderboard(update: Update, context: CallbackContext) -> None:
