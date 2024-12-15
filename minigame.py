@@ -29,80 +29,16 @@ def update_user_credits(user_id, amount):
 
 # Mini-games
 async def dart(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-
-    user_data = get_user_by_id(user_id)
-
-    if not user_data:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    result = random.choice(["bullseye", "miss"])
-    if result == "bullseye":
-        update_user_credits(user_id, 100)
-        await update.message.reply_text("🎯")  # Send emoji first
-        await update.message.reply_text("Bullseye! You earned 100 credits! 😎")  # Send text message
-    else:
-        update_user_credits(user_id, -100)
-        await update.message.reply_text("🎯")  # Send emoji first
-        await update.message.reply_text("Miss! You lost 100 credits. 😢")  # Send text message
+    await update.message.reply_text("🎯")  # Sends the dart emoji to trigger animation
 
 async def basketball(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-
-    user_data = get_user_by_id(user_id)
-
-    if not user_data:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    result = random.choice(["score", "miss"])
-    if result == "score":
-        update_user_credits(user_id, 75)
-        await update.message.reply_text("🏀")  # Send emoji first
-        await update.message.reply_text("Score! You earned 75 credits! 🏆")  # Send text message
-    else:
-        update_user_credits(user_id, -75)
-        await update.message.reply_text("🏀")  # Send emoji first
-        await update.message.reply_text("Miss! You lost 75 credits. 😞")  # Send text message
+    await update.message.reply_text("🏀")  # Sends the basketball emoji to trigger animation
 
 async def flip(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-
-    user_data = get_user_by_id(user_id)
-
-    if not user_data:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    result = random.choice(["heads", "tails"])
-    if result == "heads":
-        update_user_credits(user_id, 50)
-        await update.message.reply_text("🪙")  # Send emoji first
-        await update.message.reply_text("Heads! You earned 50 credits! 🤑")  # Send text message
-    else:
-        update_user_credits(user_id, -50)
-        await update.message.reply_text("🪙")  # Send emoji first
-        await update.message.reply_text("Tails! You lost 50 credits. 😔")  # Send text message
+    await update.message.reply_text("🪙")  # Sends the coin emoji to trigger animation
 
 async def dice(update: Update, context: CallbackContext) -> None:
-    user_id = str(update.effective_user.id)
-
-    user_data = get_user_by_id(user_id)
-
-    if not user_data:
-        await update.message.reply_text("You need to start the bot first by using /start.")
-        return
-
-    roll = random.randint(1, 6)
-    if roll == 6:
-        update_user_credits(user_id, 150)
-        await update.message.reply_text("🎲")  # Send emoji first
-        await update.message.reply_text("You rolled a 6! Jackpot! You earned 150 credits! 🎉")  # Send text message
-    else:
-        update_user_credits(user_id, -30)
-        await update.message.reply_text("🎲")  # Send emoji first
-        await update.message.reply_text(f"You rolled a {roll}. Better luck next time! You lost 30 credits. 🙃")
+    await update.message.reply_text("🎲") 
         
 async def credits_leaderboard(update: Update, context: CallbackContext) -> None:
     try:
