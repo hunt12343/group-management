@@ -39,6 +39,10 @@ def get_genshin_user_by_id(user_id):
 def save_genshin_user(user_data):
     genshin_collection.update_one({"user_id": user_data["user_id"]}, {"$set": user_data}, upsert=True)
 
+def escape_markdown_v2(text):
+    escape_chars = r'\_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
+
 async def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
     user_id = str(user.id)
