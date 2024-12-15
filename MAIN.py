@@ -2,6 +2,7 @@ from token_1 import token
 from telegram import Update, ChatPermissions
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import logging
+import asyncio
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -134,6 +135,18 @@ async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TY
         except Exception as e:
             logger.error(f"Failed to delete message from muted user: {e}")
 
+async def health_check(request):
+    return web.Response(text="OK", status=200)
+
+async def start_health_server():
+    app = web.Application()
+    app.add_routes([web.get("/", health_check)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8000)
+    await site.start()
+    logger.info("Health check server running on port 8000")
+
 def main() -> None:
     # Replace 'YOUR_TOKEN_HERE' with your actual bot token
      application = Application.builder().token(token).build()
@@ -149,7 +162,10 @@ def main() -> None:
     # Add message handler to delete messages from muted users
     application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
 
-    application.run_polling()
+    await asyncio.gather(
+        application.run_polling(),
+        start_health_server()
+    )
     
 if __name__ == '__main__':
     main()
