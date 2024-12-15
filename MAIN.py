@@ -27,6 +27,17 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_to_mute = update.message.reply_to_message.from_user.id
     chat_id = update.message.chat_id
+
+    try:
+        # Add user to muted list
+        muted_users.add(user_to_mute)
+
+        # Restrict user in chat
+        await context.bot.restrict_chat_member(
+            chat_id,
+            user_to_mute,
+            permissions=ChatPermissions(can_send_messages=False)
+        )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been muted.")
 
     except Exception as e:
@@ -45,6 +56,7 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
 
     try:
+        # Remove user from muted list
         muted_users.discard(user_to_unmute)
 
         # Remove restrictions
@@ -58,7 +70,6 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"Failed to unmute user: {e}")
 
-
 async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.from_user.id in muted_users:
         try:
@@ -71,8 +82,9 @@ async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TY
 
 def main() -> None:
     port = int(os.getenv("PORT", 8000))
+
     # Replace 'YOUR_TOKEN_HERE' with your actual bot token
-    application = Application.builder().token("6970211159:AAH-D8Ixmb3ZAIaTN2ZsulHNIhEPhShqMh4").build()
+    application = Application.builder().token("YOUR_BOT_TOKEN").build()
 
     # Add command handlers
     application.add_handler(CommandHandler("start", start))
