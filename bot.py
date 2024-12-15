@@ -109,8 +109,9 @@ async def profile(update: Update, context: CallbackContext) -> None:
         try:
             photos = await context.bot.get_user_profile_photos(user_id)
             if photos.photos:
-                photo = photos.photos[0][0].file_id
-                await update.message.reply_photo(photo=photo, caption=profile_message)
+                # Use the smallest size available (last element in the list)
+                smallest_photo = photos.photos[0][-1].file_id
+                await update.message.reply_photo(photo=smallest_photo, caption=profile_message)
             else:
                 await update.message.reply_text(profile_message)
         except Exception as e:
@@ -118,6 +119,7 @@ async def profile(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text(profile_message)
     else:
         await update.message.reply_text("You need to start the bot first by using /start.")
+
 
 
 
