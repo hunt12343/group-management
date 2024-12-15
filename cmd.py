@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 muted_users = set()
 
 # List of owner IDs
-Mute_IDS = [5667016949, 1474610394, 1322464076]
+OWNER_IDS = [5667016949, 1474610394, 1322464076]
 
 async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in Mute_IDS:
+    if update.effective_user.id not in OWNER_IDS:
         await update.message.reply_text("You are not authorized to use this command.")
         return
 
@@ -34,10 +34,10 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been muted.")
     except Exception as e:
-        await update.message.reply_text(f"Muted Admin haha!!")
+        await update.message.reply_text(f"Failed to mute user: {e}")
 
 async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in Mute_IDS:
+    if update.effective_user.id not in OWNER_IDS:
         await update.message.reply_text("You are not authorized to use this command.")
         return
 
@@ -58,7 +58,7 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been unmuted.")
     except Exception as e:
-        await update.message.reply_text(f"Unmuted!!!")
+        await update.message.reply_text(f"Failed to unmute user: {e}")
 
 async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.from_user.id in muted_users:
