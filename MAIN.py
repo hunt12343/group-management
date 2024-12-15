@@ -1,4 +1,4 @@
-from token_1 import token
+
 from telegram import Update, ChatPermissions
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import logging
@@ -13,6 +13,8 @@ OWNER_IDS = [5667016949]
 
 # List of admin IDs
 admin_ids = set()
+
+token="6970211159:AAH-D8Ixmb3ZAIaTN2ZsulHNIhEPhShqMh4"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hi! I'm your bot. Use /amute, /aunmute, /addowner, /add_admin, and /remove_admin to control users.")
@@ -30,7 +32,6 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
 
     try:
-        # Add user to the muted list
         muted_users.add(user_to_mute)
         await context.bot.restrict_chat_member(
             chat_id,
@@ -54,7 +55,6 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
 
     try:
-        # Remove user from the muted list
         muted_users.discard(user_to_unmute)
         await context.bot.restrict_chat_member(
             chat_id,
@@ -133,10 +133,8 @@ async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TY
             logger.error(f"Failed to delete message from muted user: {e}")
 
 async def main():
-    # Initialize the application
     application = Application.builder().token(token).build()
 
-    # Add command handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("amute", amute))
     application.add_handler(CommandHandler("aunmute", aunmute))
@@ -144,10 +142,8 @@ async def main():
     application.add_handler(CommandHandler("add_admin", add_admin, filters=filters.ChatType.PRIVATE))
     application.add_handler(CommandHandler("remove_admin", remove_admin, filters=filters.ChatType.PRIVATE))
 
-    # Add message handler to delete messages from muted users
     application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
 
-    # Run the bot
     await application.run_polling()
 
 if __name__ == "__main__":
