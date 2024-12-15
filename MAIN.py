@@ -2,21 +2,25 @@ from token_1 import token
 from telegram import Update, ChatPermissions
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import logging
-import asyncio
 from aiohttp import web
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global variables for user permissions
+# Dictionary to keep track of muted users
 muted_users = set()
+
+# List of owner IDs
 OWNER_IDS = [5667016949]
+
+# List of admin IDs
 admin_ids = set()
 
-# Bot Handlers
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hi! I'm your bot. Use /amute, /aunmute, /addowner, /add_admin, and /remove_admin to control users.")
+
 
 async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS and update.effective_user.id not in admin_ids:
@@ -31,6 +35,7 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
 
     try:
+        # Add user to the muted list
         muted_users.add(user_to_mute)
         await context.bot.restrict_chat_member(
             chat_id,
@@ -39,8 +44,8 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been muted.")
     except Exception as e:
-        logger.error(f"Failed to mute user: {e}")
         await update.message.reply_text(f"Failed to mute user: {e}")
+
 
 async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS and update.effective_user.id not in admin_ids:
@@ -55,6 +60,7 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
 
     try:
+        # Remove user from the muted list
         muted_users.discard(user_to_unmute)
         await context.bot.restrict_chat_member(
             chat_id,
@@ -63,8 +69,8 @@ async def aunmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been unmuted.")
     except Exception as e:
-        logger.error(f"Failed to unmute user: {e}")
         await update.message.reply_text(f"Failed to unmute user: {e}")
+
 
 async def add_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
@@ -85,6 +91,7 @@ async def add_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("Invalid user ID. Please provide a numeric user ID.")
 
+
 async def add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
         await update.message.reply_text("You are not authorized to use this command.")
@@ -103,6 +110,7 @@ async def add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"User ID {new_admin_id} has been added as an admin.")
     except ValueError:
         await update.message.reply_text("Invalid user ID. Please provide a numeric user ID.")
+
 
 async def remove_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in OWNER_IDS:
@@ -123,6 +131,7 @@ async def remove_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("Invalid user ID. Please provide a numeric user ID.")
 
+
 async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.from_user.id in muted_users:
         try:
@@ -133,21 +142,18 @@ async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TY
         except Exception as e:
             logger.error(f"Failed to delete message from muted user: {e}")
 
-# Health Check
+
 async def health_check(request):
     return web.Response(text="OK", status=200)
 
-async def start_health_server():
+
+def start_health_server():
     app = web.Application()
     app.add_routes([web.get("/", health_check)])
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 8000)
-    await site.start()
-    logger.info("Health check server running on port 8000")
+    return app
 
-# Main Function
-async def main():
+
+def main() -> None:
     application = Application.builder().token(token).build()
 
     # Add command handlers
@@ -157,13 +163,14 @@ async def main():
     application.add_handler(CommandHandler("addowner", add_owner, filters=filters.ChatType.PRIVATE))
     application.add_handler(CommandHandler("add_admin", add_admin, filters=filters.ChatType.PRIVATE))
     application.add_handler(CommandHandler("remove_admin", remove_admin, filters=filters.ChatType.PRIVATE))
+
+    # Add message handler to delete messages from muted users
     application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, delete_muted_messages))
 
-    # Run both polling and health server
-    await asyncio.gather(
-        application.run_polling(),
-        start_health_server()
-    )
+    # Start health check server
+    runner = web.AppRunner(start_health_server())
+    application.run_polling(poll_interval=5, runner=runner)
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
