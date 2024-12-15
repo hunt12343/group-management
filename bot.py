@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 from token_1 import token
 
 from genshin_game import pull, bag, reward_primos, add_primos, leaderboard, handle_message, button, reset_bag_data, drop_primos
-from minigame import dart, basketball, flip, dice
+from minigame import dart, basketball, flip, dice, credits_leaderboard
 from cmd import amute, aunmute, delete_muted_messages
 # Global variables
 OWNER_ID = 5667016949
@@ -142,6 +142,8 @@ def main() -> None:
     application.add_handler(CommandHandler("leaderboard", leaderboard))
     application.add_handler(CommandHandler('drop_primos', drop_primos))
     application.add_handler(CommandHandler("reset_bag_data", reset_bag_data))
+    application.add_handler(CommandHandler("credits_leaderboard", credits_leaderboard))
+
     
 
     # Add message handlers
