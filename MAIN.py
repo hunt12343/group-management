@@ -8,11 +8,8 @@ import asyncio
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Dictionary to keep track of muted users
 muted_users = set()
 
-# List of owner IDs
 OWNER_IDS = [5667016949]
 
 # List of admin IDs
@@ -143,23 +140,7 @@ async def delete_muted_messages(update: Update, context: ContextTypes.DEFAULT_TY
         except Exception as e:
             logger.error(f"Failed to delete message from muted user: {e}")
 
-
-async def health_check(request):
-    return web.Response(text="OK", status=200)
-
-
-async def start_health_server():
-    app = web.Application()
-    app.add_routes([web.get("/", health_check)])
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, host="0.0.0.0", port=8080)
-    await site.start()
-
-
 async def main():
-    # Start the health server in a separate coroutine
-    await start_health_server()
 
     # Initialize the application
     application = Application.builder().token(token).build()
