@@ -102,4 +102,27 @@ async def dice(update: Update, context: CallbackContext) -> None:
     else:
         update_user_credits(user_id, -30)
         await update.message.reply_text("🎲")  # Send emoji first
-        await update.message.reply_text(f"You rolled a {roll}. Better luck next time! You lost 30 credits. 🙃")  # Send text message
+        await update.message.reply_text(f"You rolled a {roll}. Better luck next time! You lost 30 credits. 🙃")
+        
+async def credits_leaderboard(update: Update, context: CallbackContext) -> None:
+    try:
+        # Fetch top 20 users sorted by credits in descending order
+        top_users = list(users_collection.find().sort("credits", -1).limit(20))
+
+        if not top_users:
+            await update.message.reply_text("No data available for the leaderboard.")
+            return
+
+        # Build the leaderboard message
+        leaderboard_message = "⚔️ *Top 20 Credits Leaderboard* ⚔️\n\n"
+        for idx, user in enumerate(top_users, start=1):
+            name = user.get("first_name", "Unknown User")
+            credits = user.get("credits", 0)
+            leaderboard_message += f"{idx}. {name} ► {credits} 👾\n"
+
+        # Send the leaderboard message
+        await update.message.reply_text(leaderboard_message)
+    except Exception as e:
+        logger.error(f"Error generating credits leaderboard: {e}")
+        await update.message.reply_text("An error occurred while generating the leaderboard.")
+
