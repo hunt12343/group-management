@@ -27,18 +27,23 @@ def update_user_credits(user_id, amount):
         {"$inc": {"credits": amount}}
     )
 
-# Mini-games
 async def dart(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("🎯")  # Sends the dart emoji to trigger animation
+    await update.message.reply_text("🎯")  # Send the dart emoji first
+    await update.message.reply_text("Bullseye!")  # Send text message
 
 async def basketball(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("🏀")  # Sends the basketball emoji to trigger animation
+    await update.message.reply_text("🏀")  # Send the basketball emoji first
+    await update.message.reply_text("Score!")  # Send text message
 
 async def flip(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("🪙")  # Sends the coin emoji to trigger animation
+    await update.message.reply_text("🪙")  # Send the coin flip emoji first
+    await update.message.reply_text("Heads or Tails?")  # Send text message
 
 async def dice(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text("🎲") 
+    roll = random.randint(1, 6)
+    await update.message.reply_text("🎲")  # Send the dice emoji first
+    await update.message.reply_text(f"You rolled a {roll}")  # Send text message
+
         
 async def credits_leaderboard(update: Update, context: CallbackContext) -> None:
     try:
