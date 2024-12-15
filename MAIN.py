@@ -26,21 +26,6 @@ async def amute(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_to_mute = update.message.reply_to_message.from_user.id
     chat_id = update.message.chat_id
-
-    try:
-        # Check if the user is an admin
-        chat_member = await context.bot.get_chat_member(chat_id, user_to_mute)
-        if chat_member.status in ['administrator', 'creator']:
-            await update.message.reply_text(f"{update.message.reply_to_message.from_user.full_name} cannot be muted because they are an admin.")
-            return
-
-        # Add user to the muted list
-        muted_users.add(user_to_mute)
-        await context.bot.restrict_chat_member(
-            chat_id,
-            user_to_mute,
-            permissions=ChatPermissions(can_send_messages=False)
-        )
         await update.message.reply_text(f"User {update.message.reply_to_message.from_user.full_name} has been muted.")
 
     except Exception as e:
