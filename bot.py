@@ -5,6 +5,8 @@ from telegram.ext import Application, MessageHandler, filters, CallbackContext, 
 from rembg import remove
 from PIL import Image, ImageDraw, ImageFont
 import io
+import asyncio
+from aiohttp import web
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -203,13 +205,33 @@ def extract_player_details(caption: str):
         )
     return details
 
-def main():
+async def health_check(request):
+    """Health check endpoint."""
+    return web.Response(text="OK", status=200)
+
+async def start_health_server():
+    """Starts a lightweight HTTP server for health checks."""
+    app = web.Application()
+    app.add_routes([web.get("/", health_check)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8000)
+    await site.start()
+    logger.info("Health check server running on port 8000")
+
+async def main():
     application = Application.builder().token(BOT_TOKEN).build()
+
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     application.add_handler(MessageHandler(filters.TEXT, handle_country_selection))
-    application.add_handler(CallbackQueryHandler(handle_country_selection, pattern='^(India|New Zealand|Australia)$'))
-    application.add_handler(CallbackQueryHandler(handle_template_selection, pattern='^(India|New Zealand|Australia)_(normal|special)$'))
-    application.run_polling()
+    application.add_handler(CallbackQueryHandler(handle_country_selection, pattern="^(India|New Zealand|Australia)$"))
+    application.add_handler(CallbackQueryHandler(handle_template_selection, pattern="^(India|New Zealand|Australia)_(normal|special)$"))
+
+    # Start health check server and bot polling concurrently
+    await asyncio.gather(
+        start_health_server(),
+        application.run_polling()
+    )
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
